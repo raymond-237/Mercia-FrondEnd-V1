@@ -1,6 +1,5 @@
 <script setup lang="ts">
 
-import { useStorefront } from '~/composables/useStorefront'
 import { useTheme } from 'vuetify'
 
 const sf = useStorefront()
