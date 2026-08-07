@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import { useStorefront } from '~/composables/useStorefront'
 
 const { t } = useI18n()
 const sf = useStorefront()
