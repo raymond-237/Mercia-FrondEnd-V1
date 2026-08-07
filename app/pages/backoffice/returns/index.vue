@@ -18,24 +18,8 @@ const SORT_OPTIONS = [
   { title: 'Plus anciennes',   value: 'createdAt' },
 ]
 
-const FALLBACK_RETURNS: ReturnRequestListItem[] = [
-  {
-    id: 'fb-1', status: 'pending', reason: 'Taille ne convient pas', notes: null,
-    createdAt: '2026-07-12T10:00:00Z', itemsCount: 1,
-    order: { id: 'o1', orderNumber: 'AE-2026-000123', total: 634.90 },
-    user: { id: 'u1', firstName: 'Marie', lastName: 'Dubois', email: 'marie.dubois@example.com' },
-  },
-  {
-    id: 'fb-2', status: 'approved', reason: 'Article défectueux', notes: null,
-    createdAt: '2026-07-10T15:20:00Z', itemsCount: 2,
-    order: { id: 'o2', orderNumber: 'AE-2026-000098', total: 349.00 },
-    user: { id: 'u2', firstName: 'Fatou', lastName: 'Diallo', email: 'fatou.diallo@example.com' },
-  },
-]
-
-const returns        = ref<ReturnRequestListItem[]>([])
-const totalPages     = ref(1)
-const usingFallback  = ref(false)
+const returns     = ref<ReturnRequestListItem[]>([])
+const totalPages  = ref(1)
 
 const SUMMARY_CARDS = [
   { key: 'pending' as const,   label: 'En attente',  icon: 'solar:clock-circle-line-duotone',    color: 'warning' },
@@ -51,6 +35,10 @@ const summary = computed(() => ({
   rejected:  returns.value.filter(r => r.status === 'rejected').length,
 }))
 
+// Le bloc vide plus bas distingue déjà "aucun retour" de "aucun résultat
+// pour cette recherche" — pas besoin d'un bandeau séparé qui dupliquait
+// (et mentait : il s'affichait même quand la liste était juste vide,
+// pas en erreur, en prétendant montrer des "données d'exemple" inexistantes).
 const loadReturns = async () => {
   const data = await store.fetchReturns({
     status: filterStatus.value !== 'all' ? filterStatus.value : undefined,
@@ -58,16 +46,8 @@ const loadReturns = async () => {
     page: currentPage.value,
   })
 
-  if (data.length) {
-    returns.value       = data
-    totalPages.value    = store.pagination?.lastPage ?? 1
-    usingFallback.value = false
-  }
-  else {
-    // returns.value        = FALLBACK_RETURNS
-    // totalPages.value     = 1
-    usingFallback.value  = true
-  }
+  returns.value    = data
+  totalPages.value = store.pagination?.lastPage ?? 1
 }
 
 onMounted(loadReturns)
@@ -128,9 +108,9 @@ const activeFilterCount = computed(() => filterSort.value !== '-createdAt' ? 1 :
 
     <UiBreadCrumbs :items="[{ label: 'Retours', icon: 'solar:map-arrow-left-line-duotone' }]" />
 
-    <div v-if="usingFallback" class="fallback-banner">
-      <Icon icon="solar:info-circle-line-duotone" width="16" />
-      Aucune demande réelle pour le moment — aperçu avec des données d'exemple.
+    <div v-if="store.error" class="error-banner">
+      <Icon icon="solar:danger-triangle-line-duotone" width="16" />
+      {{ store.error }}
     </div>
 
     <div class="summary-grid">
@@ -241,7 +221,7 @@ const activeFilterCount = computed(() => filterSort.value !== '-createdAt' ? 1 :
       </NuxtLink>
     </div>
 
-    <UiPagination v-if="!usingFallback" v-model="currentPage" :total-pages="totalPages" />
+    <UiPagination v-model="currentPage" :total-pages="totalPages" />
 
     <!-- Offcanvas filtres -->
     <v-navigation-drawer v-model="filterOpen" temporary location="right" width="320">
@@ -287,9 +267,9 @@ const activeFilterCount = computed(() => filterSort.value !== '-createdAt' ? 1 :
 .hide-mobile { display: none; }
 .hide-mobile-text { display: none; }
 
-.fallback-banner {
+.error-banner {
   display: flex; align-items: center; gap: 8px;
-  background: rgba(var(--v-theme-secondary), 0.08); color: rgb(var(--v-theme-secondary));
+  background: rgba(192, 83, 62, 0.1); color: #C0533E;
   border-radius: var(--r-lg); padding: 10px 14px; font-size: 12px; font-weight: 600;
   margin-bottom: 14px;
 }
@@ -387,4 +367,4 @@ const activeFilterCount = computed(() => filterSort.value !== '-createdAt' ? 1 :
   .return-card { flex-direction: column; align-items: stretch; }
   .return-meta { justify-content: space-between; }
 }
-</style>
+</style>  

@@ -134,6 +134,18 @@ export const useProductsStore = defineStore('products', () => {
         }
       }
 
+      // Variantes déjà existantes (id présent) — manquait entièrement avant :
+      // seules les nouvelles variantes étaient sauvegardées, toute modif sur
+      // une variante existante (prix, prix de revient, sku...) était perdue.
+      const existingVariants = (payload.variants ?? []).filter((v: any) => !!v.id)
+      for (const variant of existingVariants) {
+        try {
+          await productsService.updateVariant(variant.id, variant)
+        } catch (e) {
+          console.error('Erreur mise à jour variante:', variant.label, e)
+        }
+      }
+
       const newVariants = (payload.variants ?? []).filter((v: any) => !v.id)
       for (const variant of newVariants) {
         try {

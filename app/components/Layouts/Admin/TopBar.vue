@@ -6,8 +6,7 @@ const profileMenuOpen = ref(false)
 const { sidebarCollapsed, toggleSidebar } = useAdminUI()
 const sf = useStorefront()
 const router = useRouter()
-const { signOut,user } = useAuthentication()
-
+const { user } = useAuthentication()
 
 // TODO Module suivant : remplacer par le vrai user connecté (auth admin)
 const currentUser = computed(() => {
@@ -19,15 +18,9 @@ const currentUser = computed(() => {
   }
 })
 
-const loggingOut = ref(false)
-async function onLogout() {
-  loggingOut.value = true
-  try {
-    await signOut({ callbackUrl: '/backoffice/auth/login', redirect: true })
-  } catch (e) {
-    console.error('Erreur déconnexion:', e)
-    loggingOut.value = false
-  }
+function goTo(path: string) {
+  profileMenuOpen.value = false
+  router.push(path)
 }
 
 defineExpose({ mobileNavOpen })
@@ -69,8 +62,7 @@ defineExpose({ mobileNavOpen })
 
       <LayoutsNotification />
 
-      <!-- Profil -->
-      <v-menu location="bottom end" offset="10">
+      <v-menu v-model="profileMenuOpen" location="bottom end" offset="10" :close-on-content-click="false">
         <template #activator="{ props }">
           <button class="user-trigger" v-bind="props">
             <div class="user-avatar">
@@ -93,27 +85,24 @@ defineExpose({ mobileNavOpen })
             </div>
           </div>
           <v-divider class="my-2" />
-          <button class="popover-item" @click="router.push('/backoffice/settings/profile')">
+          <button class="popover-item" @click="goTo('/backoffice/settings/profile')">
             <Icon icon="solar:user-circle-line-duotone" width="22" />
             Mon profil
           </button>
-          <button class="popover-item" @click="router.push('/backoffice/settings')">
+          <button class="popover-item" @click="goTo('/backoffice/settings')">
             <Icon icon="solar:settings-line-duotone" width="22" />
             Paramètres
           </button>
           <v-divider class="my-2" />
-            <UiLogoutBtn>
-                  <template #action="{ logout }">
-                    <button class="popover-item danger" @click="logout">
-                      <Icon icon="solar:logout-3-line-duotone" width="22" />
-                      Déconnexion
-                    </button>
-                  </template>
-            </UiLogoutBtn>
-          <!-- <button class="popover-item danger" :disabled="loggingOut" @click="onLogout">
-            <Icon icon="solar:logout-3-line-duotone" width="22" />
-            {{ loggingOut ? 'Déconnexion...' : 'Déconnexion' }}
-          </button> -->
+          <UiLogoutBtn>
+            <template #action="{ logout }">
+              <button class="popover-item danger" @click="profileMenuOpen = false; logout()">
+                <Icon icon="solar:logout-3-line-duotone" width="22" />
+                Déconnexion
+              </button>
+            </template>
+          </UiLogoutBtn>
+
         </div>
       </v-menu>
 

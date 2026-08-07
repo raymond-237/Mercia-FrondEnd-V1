@@ -136,7 +136,7 @@ function onNavigate() {
                       Déconnexion
                     </button>
                   </template>
-            </UiLogoutBtn>
+        </UiLogoutBtn>
     </div>
 
   </aside>

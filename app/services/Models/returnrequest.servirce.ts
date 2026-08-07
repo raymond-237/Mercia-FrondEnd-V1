@@ -3,6 +3,20 @@ import { request } from '~/@cores/constantes/helpers'
 import { JsonaDeserialize } from '~/@cores/jsonabuilder'
 import type { ReturnRequestListItem, ReturnRequestDetail } from '~/types/Models/returnRequest.type'
 
+/**
+ * JSON:API sérialise les décimaux en string ("634.90", pas 634.90) —
+ * même comportement que pour les commandes (voir ordersAdmin.services.ts).
+ * order.total est imbriqué dans la relation `order`, donc pas couvert par
+ * un simple mapAmounts() au niveau racine — mapping dédié ici.
+ */
+function mapReturnAmounts<T extends { order?: { total: any } | null }>(raw: T): T {
+  if (!raw?.order || raw.order.total == null) return raw
+  return {
+    ...raw,
+    order: { ...raw.order, total: Number(raw.order.total) },
+  }
+}
+
 export default function useReturnRequestsService() {
 
   const list = async (params?: { status?: string; page?: number }) => {
@@ -14,8 +28,11 @@ export default function useReturnRequestsService() {
         include: 'items,order,user',
       },
     })
+
+    const raw = JsonaDeserialize<ReturnRequestListItem[]>(response.data) ?? []
+
     return {
-      data: JsonaDeserialize<ReturnRequestListItem[]>(response.data),
+      data: raw.map(mapReturnAmounts),
       meta: response.data?.meta,
     }
   }
@@ -25,7 +42,9 @@ export default function useReturnRequestsService() {
       method: 'get',
       params: { include: 'items,order,user' },
     })
-    return JsonaDeserialize<ReturnRequestDetail>(response.data)
+
+    const raw = JsonaDeserialize<ReturnRequestDetail>(response.data)
+    return raw ? mapReturnAmounts(raw) : raw
   }
 
   const approve = async (id: string, restoreStock: boolean) => {
@@ -33,7 +52,8 @@ export default function useReturnRequestsService() {
       method: 'post',
       data: { restore_stock: restoreStock },
     })
-    return JsonaDeserialize<ReturnRequestDetail>(response.data)
+    const raw = JsonaDeserialize<ReturnRequestDetail>(response.data)
+    return raw ? mapReturnAmounts(raw) : raw
   }
 
   const reject = async (id: string, reason?: string) => {
@@ -41,14 +61,16 @@ export default function useReturnRequestsService() {
       method: 'post',
       data: { reason },
     })
-    return JsonaDeserialize<ReturnRequestDetail>(response.data)
+    const raw = JsonaDeserialize<ReturnRequestDetail>(response.data)
+    return raw ? mapReturnAmounts(raw) : raw
   }
 
   const complete = async (id: string) => {
     const response: AxiosResponse = await request(`return-requests/${id}/complete`, {
       method: 'post',
     })
-    return JsonaDeserialize<ReturnRequestDetail>(response.data)
+    const raw = JsonaDeserialize<ReturnRequestDetail>(response.data)
+    return raw ? mapReturnAmounts(raw) : raw
   }
 
   return { list, show, approve, reject, complete }

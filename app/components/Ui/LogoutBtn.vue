@@ -4,42 +4,30 @@ import { notify } from "~/@cores/constantes/helpers";
 const loading = ref<boolean>(false);
 const confirm = ref<boolean>(false);
 
-const { isAuthenticated, signOut } = useAuthentication();
-
-const slots = useSlots();
+const { signOut } = useAuthentication();
 
 async function logout() {
+  loading.value = true;
   try {
-    loading.value = true;
 
-    const response = await signOut({
-      redirect: true,
-      // callbackUrl: "backoffice/auth/login",
+    await signOut({ redirect: false });
+
+    notify({
+      message: "Déconnexion réussie",
+      color: "success",
+      timeout: 2000,
     });
 
-    if (!isAuthenticated.value) {
-      notify({
-        message: "Déconnexion réussie",
-        color: "success",
-        timeout:2000
-      });
-      await navigateTo("backoffice/auth/login");
-    } else {
-      notify({
-        message: "Impossible de vous déconnecter. Veuillez réessayer.",
-        color: "error",
-        timeout:2000
-      });
-    }
+    await navigateTo("/backoffice/auth/login", { external: true });
   } catch (error) {
     notify({
       message: "Erreur lors de la déconnexion",
       color: "error",
+      timeout: 3000,
     });
   } finally {
     confirm.value = false;
     loading.value = false;
-    
   }
 }
 
@@ -97,7 +85,7 @@ function openConfirm() {
           class="font-weight-medium"
           @click="openConfirm"
       >
-        <Logout2Icon class="mr-1 " stroke-width="1.5" size="26" />
+        <Icon icon="solar:logout-3-line-duotone" width="22" style="margin-right: 6px;" />
         Déconnexion
       </v-btn>
     </slot>

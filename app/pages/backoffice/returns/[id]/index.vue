@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useAdminReturnRequestsStore } from '~/stores/Models/returnrequest.store'
+import { notify } from '~/@cores/constantes/helpers'
 import type { ReturnRequestDetail, ReturnStatus, ReturnResolution } from '~/types/Models/returnRequest.type'
 
 definePageMeta({ layout: 'admin' })
@@ -7,29 +8,26 @@ definePageMeta({ layout: 'admin' })
 const route = useRoute()
 const store = useAdminReturnRequestsStore()
 
-const FALLBACK_RETURN: ReturnRequestDetail = {
-  id: 'fb-1', status: 'pending', reason: 'Taille ne convient pas', notes: null,
-  createdAt: '2026-07-12T10:00:00Z', itemsCount: 1,
-  order: { id: 'o1', orderNumber: 'AE-2026-000123', total: 634.90 },
-  user: { id: 'u1', firstName: 'Marie', lastName: 'Dubois', email: 'marie.dubois@example.com' },
-  items: [
-    { id: 'ri1', orderItemId: 'i1', quantity: 1, condition: 'Neuf, jamais porté', resolution: 'refund', productName: 'Ébène Lisse Frontal', variantName: '22 pouces' },
-  ],
-}
-
-const returnRequest = ref<ReturnRequestDetail>(FALLBACK_RETURN)
+// Plus de FALLBACK — un admin qui voit une demande de retour doit voir la
+// VRAIE, jamais "Marie Dubois" en silence si le chargement échoue. Un état
+// "introuvable" explicite évite aussi d'envoyer des actions (approuver/
+// rejeter) contre un id bidon qui n'existe pas côté backend.
+const returnRequest = ref<ReturnRequestDetail | null>(null)
 const loading        = ref(true)
-const usingFallback   = ref(false)
+const notFound        = ref(false)
 
 const loadReturn = async () => {
+  loading.value  = true
+  notFound.value = false
+
   const data = await store.fetchReturnDetail(route.params.id as string)
-  if (data) {
-    returnRequest.value = data
-    usingFallback.value = false
+
+  if (!data) {
+    notFound.value = true
   } else {
-    returnRequest.value = FALLBACK_RETURN
-    usingFallback.value = true
+    returnRequest.value = data
   }
+
   loading.value = false
 }
 onMounted(loadReturn)
@@ -49,28 +47,43 @@ function formatDate(iso: string) {
 const approveDialog  = ref(false)
 const restoreStock   = ref(true)
 async function onApprove() {
+  if (!returnRequest.value) return
   const success = await store.approveReturn(returnRequest.value.id, restoreStock.value)
   if (success && store.currentReturn) returnRequest.value = store.currentReturn
   approveDialog.value = false
-  notify(success ? 'Demande approuvée avec succès.' : 'Une erreur est survenue.', success ? 'success' : 'error')
+  notify({
+    message: success ? 'Demande approuvée avec succès.' : (store.error ?? 'Une erreur est survenue.'),
+    color: success ? 'success' : 'error',
+    timeout: 3500,
+  })
 }
 
 // ── Rejet
 const rejectDialog = ref(false)
 const rejectReason  = ref('')
 async function onReject() {
+  if (!returnRequest.value) return
   const success = await store.rejectReturn(returnRequest.value.id, rejectReason.value || undefined)
   if (success && store.currentReturn) returnRequest.value = store.currentReturn
   rejectDialog.value = false
   rejectReason.value = ''
-  notify(success ? 'Demande rejetée.' : 'Une erreur est survenue.', success ? 'success' : 'error')
+  notify({
+    message: success ? 'Demande rejetée.' : (store.error ?? 'Une erreur est survenue.'),
+    color: success ? 'success' : 'error',
+    timeout: 3500,
+  })
 }
 
 // ── Complétion
 async function onComplete() {
+  if (!returnRequest.value) return
   const success = await store.completeReturn(returnRequest.value.id)
   if (success && store.currentReturn) returnRequest.value = store.currentReturn
-  notify(success ? 'Retour marqué comme complété.' : 'Une erreur est survenue.', success ? 'success' : 'error')
+  notify({
+    message: success ? 'Retour marqué comme complété.' : (store.error ?? 'Une erreur est survenue.'),
+    color: success ? 'success' : 'error',
+    timeout: 3500,
+  })
 }
 </script>
 
@@ -79,19 +92,20 @@ async function onComplete() {
 
     <UiBreadCrumbs :items="[
       { label: 'Retours', icon: 'solar:map-arrow-left-line-duotone', to: '/backoffice/returns' },
-      { label: loading ? '...' : (returnRequest.order?.orderNumber ?? 'Détail') },
+      { label: loading ? '...' : (returnRequest?.order?.orderNumber ?? 'Détail') },
     ]" />
-
-    <div v-if="usingFallback" class="fallback-banner">
-      <Icon icon="solar:info-circle-line-duotone" width="16" />
-      Demande introuvable ou API indisponible — aperçu avec des données d'exemple.
-    </div>
 
     <div v-if="loading" class="loading-block">
       <v-progress-circular indeterminate color="secondary" size="28" />
     </div>
 
-    <template v-else>
+    <div v-else-if="notFound" class="empty-block">
+      <Icon icon="solar:map-arrow-left-line-duotone" width="40" />
+      <p>Demande de retour introuvable.</p>
+      <v-btn variant="tonal" rounded="xl" to="/backoffice/returns">Retour à la liste</v-btn>
+    </div>
+
+    <template v-else-if="returnRequest">
 
       <!-- En-tête statut + actions -->
       <div class="panel status-panel">
@@ -136,7 +150,7 @@ async function onComplete() {
           </div>
 
           <div class="panel">
-            <h2>Articles concernés</h2>
+            <h2>Articles concernés ({{ returnRequest.itemsCount }})</h2>
             <div class="items-list">
               <div v-for="item in returnRequest.items" :key="item.id" class="item-row">
                 <div class="item-info">
@@ -233,14 +247,15 @@ async function onComplete() {
 </template>
 
 <style scoped>
-.fallback-banner {
-  display: flex; align-items: center; gap: 8px;
-  background: rgba(var(--v-theme-secondary), 0.08); color: rgb(var(--v-theme-secondary));
-  border-radius: var(--r-lg); padding: 10px 14px; font-size: 12px; font-weight: 600;
-  margin-bottom: 14px;
+.loading-block, .empty-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 60px 0;
+  color: rgb(var(--v-theme-on-surface-variant));
 }
-
-.loading-block { display: flex; justify-content: center; padding: 48px 0; }
 
 .panel {
   background: rgb(var(--v-theme-surface));

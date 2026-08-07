@@ -170,7 +170,11 @@ function buildVariantDocument(productId: string, variant: any) {
     name: variant.label,
     sku: variant.sku || undefined,
     price: variant.price,
-    costPrice: variant.costPrice ?? undefined,
+    // Le Schema expose "purchasePrice" -> colonne purchase_price, la même
+    // que lit OrderService::buildAndValidateLines() et AnalyticsService —
+    // jamais "costPrice", qui pointait vers une colonne (cost_price) que
+    // rien d'autre dans le backend ne consulte.
+    purchasePrice: variant.costPrice ?? undefined,
     initialStock: variant.stock ?? 0,
   }
 
@@ -178,6 +182,24 @@ function buildVariantDocument(productId: string, variant: any) {
   base.data.relationships = {
     product: { data: { type: PRODUCTS, id: productId } },
   }
+  return base
+}
+
+/**
+ * Update d'une variante EXISTANTE — volontairement sans initialStock
+ * (ce champ ne sert qu'à la création, le réenvoyer sur un update
+ * risquerait d'écraser le stock réel géré depuis ailleurs).
+ */
+function buildVariantUpdateDocument(variantId: string, variant: any) {
+  const attributes = {
+    name: variant.label,
+    sku: variant.sku || undefined,
+    price: variant.price,
+    purchasePrice: variant.costPrice ?? undefined,
+  }
+
+  const base = JsonaSerialize(PRODUCT_VARIANTS, attributes) as any
+  base.data.id = variantId
   return base
 }
 
@@ -277,6 +299,20 @@ export default function useProductsService() {
   }
 
   /**
+   * PATCH /api/v1/product-variants/{id}
+   * Manquait entièrement — sans elle, modifier une variante déjà créée
+   * (prix, prix de revient, sku...) ne sauvegardait jamais rien.
+   */
+  const updateVariant = async (variantId: string, variant: any) => {
+    const data = buildVariantUpdateDocument(variantId, variant)
+    const response: AxiosResponse = await request(`product-variants/${variantId}`, {
+      method: 'patch',
+      data,
+    })
+    return JsonaDeserialize<any>(response.data)
+  }
+
+  /**
    * DELETE /api/v1/product-variants/{id}
    */
   const deleteVariant = async (variantId: string) => {
@@ -289,6 +325,7 @@ export default function useProductsService() {
     create,
     update,
     createVariant,
+    updateVariant,
     deleteVariant,
   }
 }
