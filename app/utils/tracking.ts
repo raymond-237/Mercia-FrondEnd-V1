@@ -1,4 +1,3 @@
-import { buildTrackingUrl } from "~/@cores/constantes/carriers";
 import type { TrackingResult } from "~/types/Models/Ordertracking";
 
 export function mapTrackingResult(data: any): TrackingResult {
