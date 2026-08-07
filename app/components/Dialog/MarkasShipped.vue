@@ -1,6 +1,6 @@
 <script setup lang="ts">
+import { CARRIERS } from '~/@cores/constantes/carriers';
 import { notify } from '~/@cores/constantes/helpers'
-import { CARRIERS, buildTrackingUrl } from '~/@cores/constantes/carriers'
 
 const props = defineProps<{
   modelValue: boolean
