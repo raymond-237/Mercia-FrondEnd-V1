@@ -15,21 +15,17 @@ const submitError = ref('')
 const initialData = computed(() => {
   if (!product.value) return undefined
 
-  // Reconstruit les variantes réelles (avec leur vrai stock depuis
-  // l'inventaire) pour que le formulaire les affiche et permette de
-  // les modifier/supprimer — plus le TODO placeholder d'avant.
   const variants = (product.value.variants ?? product.value.productVariants ?? []).map((v: any) => ({
     id: v.id,
     key: v.id,
     label: v.name,
     sku: v.sku ?? '',
     price: Number(v.price ?? 0),
+    costPrice: v.costPrice != null ? Number(v.costPrice) : null,
     stock: v.stockQuantity ?? v.inventory?.quantity ?? 0,
   }))
 
-  // Reconstruit un type d'option unique "Variante" à partir des noms
-  // existants, pour que la génération automatique ne les efface pas
-  // tant que l'utilisateur n'a rien changé côté options.
+
   const optionTypes = variants.length
     ? [{ id: crypto.randomUUID(), name: 'Variante', values: variants.map((v: any) => v.label) }]
     : []
@@ -40,6 +36,7 @@ const initialData = computed(() => {
     category: product.value.category?.id ?? null,
     price: product.value.price,
     comparePrice: product.value.comparePrice ?? null,
+    costPrice: product.value.costPrice ?? null,
     sku: product.value.sku ?? '',
     shortDescription: product.value.shortDescription ?? '',
     description: product.value.description ?? '',

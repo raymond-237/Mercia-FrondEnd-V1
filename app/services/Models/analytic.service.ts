@@ -22,6 +22,22 @@ export interface CategoryProfit {
   marginPercent: number
 }
 
+export interface StockOverview {
+  totalQuantity: number
+  variantsCount: number
+  costValue: number
+  potentialRevenue: number
+  potentialProfit: number
+}
+ 
+export interface LowStockItem {
+  variantId: string
+  productName: string
+  variantName: string
+  quantity: number
+  lowStockThreshold: number
+}
+
 export interface PaymentMethodAmount {
   method: string
   ordersCount: number
@@ -62,8 +78,19 @@ export default function useAnalyticsService() {
     return response.data.data as {
       received: PaymentMethodAmount[]
       pending: PaymentMethodAmount[]
-    }
+      }
+      
   }
 
-  return { profitByCategory, paymentBreakdown }
+  const stockOverview = async () => {
+  const response: AxiosResponse = await request('analytics/stock-overview', {
+    method: 'get',
+  })
+ 
+  return response.data.data as {
+    overview: StockOverview
+    lowStock: LowStockItem[]
+  }
+}
+  return { profitByCategory, paymentBreakdown,stockOverview }
 }

@@ -118,7 +118,7 @@ onMounted(() => {
           variant="tonal" rounded="pill" size="large"
         >{{ t('order.confirmation.continueShopping') }}</v-btn>
         <v-btn
-          to="/order/tracking"
+          to="/tracking"
           color="primary" variant="flat" rounded="pill" size="large"
         >
           {{ t('order.confirmation.trackOrder') }}

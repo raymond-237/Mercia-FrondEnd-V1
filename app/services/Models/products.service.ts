@@ -114,7 +114,10 @@ function mapProductToDetail(raw: any): ProductDetailData {
       name:          v.name,
       sku:           v.sku ?? null,
       price:         Number(v.price ?? 0),
-      costPrice:     v.costPrice != null ? Number(v.costPrice) : null,
+      // Le Schema ProductVariant expose "purchasePrice" (pas "costPrice",
+      // contrairement au Product) — costPrice ici est juste le nom de champ
+      // interne côté frontend, gardé pour ne pas casser AdminProductForm.
+      costPrice:     v.purchasePrice != null ? Number(v.purchasePrice) : null,
       isDefault:     v.isDefault ?? false,
       isActive:      v.isActive ?? true,
       minQuantity:   v.minQuantity ?? 1,

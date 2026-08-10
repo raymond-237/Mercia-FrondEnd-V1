@@ -323,7 +323,7 @@ function initials(name: string): string {
           />
         </div>
 
-        <div class="filter-foot">
+        <div class="filter-foot mx-auto">
           <v-btn variant="tonal" color="primary" rounded="xl"  @click="resetFilters">
             Réinitialiser
           </v-btn>
