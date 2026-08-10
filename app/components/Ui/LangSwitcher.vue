@@ -8,14 +8,26 @@ const LOCALES = [
 ]
 
 const menu = ref(false)
+const switching = ref(false)
+const pendingCode = ref<string | null>(null)
 
 const current = computed(() =>
     LOCALES.find(l => l.code === sf.locale.value) ?? LOCALES[0]
 )
 
-function select(code: string) {
-    sf.setLocale(code)
-    menu.value = false
+async function select(code: string) {
+    if (code === current.value.code || switching.value) return
+
+    switching.value  = true
+    pendingCode.value = code
+
+    try {
+        await sf.setLocale(code)
+    } finally {
+        switching.value   = false
+        pendingCode.value = null
+        menu.value        = false
+    }
 }
 </script>
 
@@ -27,8 +39,14 @@ function select(code: string) {
         :close-on-content-click="false"
     >
         <template #activator="{ props }">
-            <button class="lang-trigger" v-bind="props">
-                <span class="lang-code">{{ current.code.toUpperCase() }}</span>
+            <button
+                class="lang-trigger" :class="{ loading: switching }"
+                v-bind="props" :disabled="switching"
+            >
+                <v-progress-circular
+                    v-if="switching" indeterminate size="13" width="2" color="currentColor"
+                />
+                <span v-else class="lang-code">{{ current.code.toUpperCase() }}</span>
                 <Icon
                     icon="solar:alt-arrow-down-line-duotone"
                     width="14"
@@ -43,13 +61,20 @@ function select(code: string) {
                 v-for="locale in LOCALES"
                 :key="locale.code"
                 class="lang-option"
-                :class="{ active: locale.code === current.code }"
+                :class="{ active: locale.code === current.code, disabled: switching }"
+                :disabled="switching"
                 @click="select(locale.code)"
             >
                 <span class="lang-option-code">{{ locale.code.toUpperCase() }}</span>
                 <span class="lang-option-label">{{ locale.label }}</span>
+
+                <v-progress-circular
+                    v-if="pendingCode === locale.code"
+                    indeterminate size="14" width="2" color="primary"
+                    class="lang-option-check"
+                />
                 <Icon
-                    v-if="locale.code === current.code"
+                    v-else-if="locale.code === current.code"
                     icon="solar:check-circle-bold-duotone"
                     width="16"
                     class="lang-option-check"
@@ -70,11 +95,17 @@ function select(code: string) {
     background: rgb(var(--v-theme-surface-variant));
     border: none;
     cursor: pointer;
-    transition: background .15s ease;
+    color: rgb(var(--v-theme-on-surface));
+    transition: background .15s ease, opacity .15s ease;
 }
 .lang-trigger:hover {
     background: rgb(var(--v-theme-surface));
 }
+.lang-trigger.loading {
+    cursor: default;
+    opacity: 0.75;
+}
+.lang-trigger:disabled { pointer-events: none; }
 
 .lang-code {
     font-size: 11px;
@@ -110,13 +141,18 @@ function select(code: string) {
     border-radius: var(--r-sm);
     cursor: pointer;
     text-align: left;
-    transition: background .15s ease;
+    transition: background .15s ease, opacity .15s ease;
 }
 .lang-option:hover {
     background: rgb(var(--v-theme-surface-variant));
 }
 .lang-option.active {
     background: rgb(var(--v-theme-surface-variant));
+}
+.lang-option.disabled {
+    opacity: 0.55;
+    cursor: default;
+    pointer-events: none;
 }
 
 .lang-option-code {

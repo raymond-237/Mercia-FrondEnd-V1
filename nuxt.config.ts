@@ -147,9 +147,7 @@ googleFonts: {
     },
   },
 
-  // ── Auth — @sidebase/nuxt-auth 
-  // Désactivé globalement pour le storefront public.
-  // Activé uniquement si tu ajoutes un espace admin plus tard.
+  
 
   auth: {
     isEnabled: true,
@@ -202,8 +200,8 @@ googleFonts: {
         { name: 'description',                            content: 'Extensions capillaires premium pour la diaspora africaine d\'Europe. Qualité Remy, livraison soignée.' },
       ],
       link: [
-        { rel: 'icon',             type: 'image/png', href: '/favicon.png' },
-        { rel: 'apple-touch-icon',                    href: '/icons/icon-192.png' },
+        { rel: 'icon',             type: 'image/png', href: '/favicon.ico' },
+        { rel: 'apple-touch-icon',                    href: '/apple-touch-icon.png' },
       ],
     },
     pageTransition: { name: 'page', mode: 'out-in' },

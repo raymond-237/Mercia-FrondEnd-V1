@@ -1,23 +1,34 @@
-import commons from "./common";
+import common from "./common";
+import about from "./about";
+import checkout from "./checkout";
+import contact from "./contact";
 import home from "./home";
-import translations from "./translations";
-import validations from "./validations";
-import products from "./products";
-import payments from "./payments";
-import formSubmissions from "./form-submissions";
-import forms from "./forms";
-import auth from "./auth";
-import members from "./members";
+import faq from "./faq";
+import legal from "./legal";
+import order from "./order";
+import returns from "./returns";
+import filters from './filters'
+import cart from './cart'
+import footer from './footer'
+import product from "./product";
+import shop from "./shop";
+
+
 
 export default {
-    COMMONS: commons,
-    HOME: home,
-    MEMBERS:members,
-    TRANSLATIONS: translations,
-    validation: validations,
-    PRODUCTS: products,
-    PAYMENTS: payments,
-    FORM_SUBMISSIONS: formSubmissions,
-    FORMS: forms,
-    AUTH: auth,
+    home,
+    common,
+    about,
+    checkout,
+    contact,
+    faq,
+    legal,
+    returns,
+    order,
+    filters,
+    cart,
+    footer,
+    product,
+    shop
+
 }
