@@ -1,5 +1,6 @@
 <script setup lang="ts">
 // import { CARRIERS } from '~/@cores/constantes/carriers';
+import { CARRIERS } from '~/@cores/constantes/carriers';
 import { notify } from '~/@cores/constantes/helpers'
 
 const props = defineProps<{

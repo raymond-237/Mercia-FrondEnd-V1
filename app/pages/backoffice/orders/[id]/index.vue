@@ -278,7 +278,7 @@ function initials(name: string): string {
           <div v-if="paymentMeta" class="panel">
             <h2>Paiement</h2>
             <div class="payment-badge">
-              <Icon :icon="paymentMeta.icon" width="18" />
+              <Icon :icon="paymentMeta.icon" width="22" />
               <span>{{ paymentMeta.label }}</span>
               <v-chip
                 size="x-small" variant="tonal"
@@ -309,13 +309,13 @@ function initials(name: string): string {
                 <span class="transaction-value">{{ formatDate(order.transaction.createdAt) }}</span>
               </div>
             </div>
-            <div v-else-if="!needsManualPaymentConfirmation" class="payment-transaction-row muted">
-              <Icon icon="solar:danger-triangle-line-duotone" width="14" />
+            <div v-else-if="needsManualPaymentConfirmation" class="payment-transaction-row muted">
+              <Icon icon="solar:danger-triangle-line-duotone" width="30" />
               <span>Aucune transaction liée — vérifie latest_transaction_id sur la commande.</span>
             </div>
 
             <div v-if="order.paidAt" class="payment-transaction-row">
-              <Icon icon="solar:check-circle-line-duotone" width="14" />
+              <Icon icon="solar:check-circle-line-duotone" width="22" />
               <span>Reçu le {{ formatDate(order.paidAt) }}</span>
             </div>
           </div>

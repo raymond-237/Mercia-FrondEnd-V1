@@ -13,6 +13,7 @@ definePageMeta({ layout: 'form' })
 const { t }        = useI18n()
 const sf            = useStorefront()
 const ordersStore   = useOrdersStore()
+const cart           = useCartStore()
 const step          = ref(1)
 
 // ── Schémas Yup par étape
@@ -149,8 +150,10 @@ const paymentIcons: Record<string, string> = {
   cash: 'solar:wallet-money-line-duotone',
 }
 
+// Remise appliquée depuis le panier (cart.promo.discountAmount) — calculée
+// côté backend au moment de checkout(), ce total n'est qu'un aperçu.
 const orderTotal = computed(
-  () => sf.cartTotal.value + (selectedMethod.value?.price ?? 0)
+  () => Math.max(0, sf.cartTotal.value + (selectedMethod.value?.price ?? 0))
 )
 
 // ── Navigation entre étapes
@@ -216,6 +219,10 @@ async function onPay() {
     })),
     shippingMethodId: selectedShipping.value,
     paymentMethod: selectedPayment.value,
+    // Le code promo appliqué au panier n'était jamais transmis ici — le
+    // champ existait déjà dans CheckoutPayload/CheckoutRequest côté
+    // backend, juste jamais lu depuis cart.promo côté page checkout.
+    discountCode: cart.promo?.code || undefined,
     source: 'web',
   }
 
@@ -481,6 +488,18 @@ async function onPay() {
               <span>{{ t('checkout.step4.subtotal') }}</span>
               <span>{{ sf.cartTotal.value.toFixed(2) }}€</span>
             </div>
+
+            <!-- Code promo appliqué — visible ici pour la première fois dans
+                 le flow, jusque-là le client n'avait aucune confirmation
+                 que sa remise suivrait jusqu'au paiement. -->
+            <div v-if="cart.promo" class="recap-total-row promo-row">
+              <span>
+                <Icon icon="solar:tag-price-line-duotone" width="14" style="margin-right: 4px; vertical-align: -2px;" />
+                {{ t('checkout.step4.promoApplied', { code: cart.promo.code }) }}
+              </span>
+              <span>-{{ cart.promo.discountAmount.toFixed(2) }}€</span>
+            </div>
+
             <div class="recap-total-row">
               <span>{{ t('checkout.step4.shipping') }}</span>
               <span>{{ selectedMethod?.isFree ? t('checkout.step4.shippingFree') : `${selectedMethod?.price.toFixed(2)}€` }}</span>
@@ -658,6 +677,7 @@ async function onPay() {
 .recap-totals { margin-bottom: 4px; }
 .recap-total-row { display: flex; justify-content: space-between; font-size: 13px; padding: 4px 0; color: rgb(var(--v-theme-on-surface-variant)); }
 .recap-total-row span:last-child { font-weight: 600; color: rgb(var(--v-theme-on-surface)); }
+.recap-total-row.promo-row span:last-child { color: #4C7A4C; }
 .recap-total-row.total { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 700; border-top: 1px solid rgb(var(--v-theme-outline)); padding-top: 10px; margin-top: 6px; color: rgb(var(--v-theme-on-surface)); }
 .recap-total-row.total span:last-child { color: rgb(var(--v-theme-secondary)); }
 

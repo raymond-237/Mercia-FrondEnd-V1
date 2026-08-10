@@ -324,10 +324,10 @@ function initials(name: string): string {
         </div>
 
         <div class="filter-foot">
-          <v-btn variant="tonal" color="surface-variant" rounded="xl" block @click="resetFilters">
+          <v-btn variant="tonal" color="primary" rounded="xl"  @click="resetFilters">
             Réinitialiser
           </v-btn>
-          <v-btn color="secondary" variant="flat" rounded="xl" block @click="applyFilters">
+          <v-btn color="secondary" variant="flat" rounded="xl"  @click="applyFilters">
             Appliquer
           </v-btn>
         </div>
