@@ -115,3 +115,10 @@ export type ServiceProps = {
 };
 
 
+
+export interface carrier {
+  code: string
+  name: string
+  /** {trackingNumber} sera remplacé par le numéro réel */
+  trackingUrlPattern: string
+}
