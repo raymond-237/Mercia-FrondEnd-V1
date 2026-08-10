@@ -114,9 +114,14 @@ function initials() {
           <v-text-field :model-value="store.profile?.email" label="Email" readonly variant="solo-filled" flat rounded="xl" density="comfortable" hint="Contacte le support pour changer ton email" persistent-hint>
             <template #prepend-inner><Icon icon="solar:letter-line-duotone" width="18" /></template>
           </v-text-field>
-          <v-text-field v-model="form.phone" label="Téléphone" variant="solo-filled" flat rounded="xl" density="comfortable">
+          
+          <UiPhoneInput 
+             v-model="form.phone"
+              label="Téléphone"
+          />
+          <!-- <v-text-field v-model="form.phone" label="Téléphone" variant="solo-filled" flat rounded="xl" density="comfortable">
             <template #prepend-inner><Icon icon="solar:phone-line-duotone" width="18" /></template>
-          </v-text-field>
+          </v-text-field> -->
         </div>
       </div>
 

@@ -1,6 +1,7 @@
 import type { FilterState } from '~/types/public/index.type'
 import { useCartStore } from '~/stores/cart.store'
 import { storeToRefs } from 'pinia'
+import { useI18n } from 'vue-i18n'
 
 export interface ColorFacet {
   label: string
@@ -8,6 +9,7 @@ export interface ColorFacet {
 }
 
 export type SortOption = 'position' | 'price' | '-price' | '-createdAt'
+export type AppLocale = 'fr' | 'en' | 'it'
 
 export const useStorefront = () => {
 
@@ -32,14 +34,33 @@ export const useStorefront = () => {
 
   const activeDrawer = useState<'cart' | 'filters' | null>('sf:drawer', () => null)
   const isDark       = useState<boolean>('sf:dark', () => false)
-  const locale       = useState<'fr' | 'it'>('sf:locale', () => 'fr')
+
+
+  const { locale: i18nLocale } = useI18n()
+
+  const locale = useState<AppLocale>(
+    'sf:locale',
+    () => (i18nLocale.value as AppLocale) ?? 'fr',
+  )
 
   const openCart    = () => { activeDrawer.value = 'cart' }
   const openFilters = () => { activeDrawer.value = 'filters' }
   const closeDrawer = () => { activeDrawer.value = null }
 
   const toggleTheme = () => { isDark.value = !isDark.value }
-  const setLocale   = (l: 'fr' | 'it') => { locale.value = l }
+
+  const setLocale = (l: AppLocale) => {
+    locale.value     = l
+    i18nLocale.value = l
+
+   
+    const localeCookie = useCookie<AppLocale>('locale', { maxAge: 60 * 60 * 24 * 365 })
+    localeCookie.value = l
+
+    if (import.meta.client) {
+      document.documentElement.setAttribute('lang', l)
+    }
+  }
 
   // ── Panier — actions
 
@@ -64,10 +85,7 @@ export const useStorefront = () => {
   }
 
   // ── Filtres
-  // Trois filtres réels seulement : couleur (dérivée des vraies
-  // variantes), prix (attribut numérique natif), tri (déjà supporté
-  // par le Schema JSON:API). Longueur/texture retirés : aucune donnée
-  // structurée n'existe côté backend pour l'instant.
+
 
   const filters = useState<FilterState>('sf:filters', () => ({
     length: [], texture: [], color: [],

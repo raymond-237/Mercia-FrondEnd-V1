@@ -41,9 +41,14 @@ async function onSubmit() {
           <v-text-field v-model="form.email" label="Email de contact" type="email" variant="solo-filled" flat rounded="xl" density="comfortable">
             <template #prepend-inner><Icon icon="solar:letter-line-duotone" width="18" /></template>
           </v-text-field>
-          <v-text-field v-model="form.phone" label="Téléphone" variant="solo-filled" flat rounded="xl" density="comfortable">
+          <!-- <v-text-field v-model="form.phone" label="Téléphone" variant="solo-filled" flat rounded="xl" density="comfortable">
             <template #prepend-inner><Icon icon="solar:phone-line-duotone" width="18" /></template>
-          </v-text-field>
+          </v-text-field> -->
+
+          <UiPhoneInput 
+             v-model="form.phone"
+              label="Téléphone"
+          />
         </div>
       </div>
 
@@ -58,9 +63,15 @@ async function onSubmit() {
           <v-text-field v-model="form.city" label="Ville" variant="solo-filled" flat rounded="xl" density="comfortable" />
           <v-text-field v-model="form.postalCode" label="Code postal" variant="solo-filled" flat rounded="xl" density="comfortable" />
         </div>
-        <v-text-field v-model="form.country" label="Pays" variant="solo-filled" flat rounded="xl" density="comfortable" class="mt-3">
+        <!-- <v-text-field v-model="form.country" label="Pays" variant="solo-filled" flat rounded="xl" density="comfortable" class="mt-3">
           <template #prepend-inner><Icon icon="solar:global-line-duotone" width="18" /></template>
-        </v-text-field>
+        </v-text-field> -->
+
+           <UiCountrySelect
+           class="mt-3"
+            v-model="form.country"
+            label="Pays" 
+          />
       </div>
 
       <div class="panel">
