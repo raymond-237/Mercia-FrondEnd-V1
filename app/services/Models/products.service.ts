@@ -263,6 +263,23 @@ export default function useProductsService() {
     return mapProductToDetail(product)
   }
 
+    /**
+   * GET /api/v1/products/{id} — résolution DIRECTE par UUID, réservée à
+   * l'admin (backoffice navigue toujours par id, jamais par slug). Route
+   * ressource JSON:API standard, aucune ambiguïté de filtre possible.
+   */
+  const showById = async (id: string, include?: string): Promise<ProductDetailData | null> => {
+    const response: AxiosResponse = await request(`products/${id}`, {
+      method: 'get',
+      params: { include },
+    })
+ 
+    const raw = JsonaDeserialize<any>(response.data)
+    if (!raw) return null
+ 
+    return mapProductToDetail(raw)
+  }
+
   /**
    * POST /api/v1/products
    */
@@ -325,6 +342,7 @@ export default function useProductsService() {
   return {
     list,
     show,
+    showById,
     create,
     update,
     createVariant,

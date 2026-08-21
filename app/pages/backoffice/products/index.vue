@@ -246,6 +246,11 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
         <v-chip v-if="activeFilterCount" size="x-small" color="secondary" class="ml-2">{{ activeFilterCount }}</v-chip>
       </v-btn>
 
+    
+      <v-btn icon variant="tonal" size="small" color="secondary" rounded="xl" :loading="loading" @click="loadProducts">
+        <Icon icon="solar:refresh-line-duotone" width="18" />
+      </v-btn>
+
       <v-btn-toggle v-model="viewMode" mandatory density="comfortable" color="secondary" rounded="xl" class="hide-mobile">
         <v-btn value="table" size="small">
           <Icon icon="solar:list-line-duotone" width="18" />

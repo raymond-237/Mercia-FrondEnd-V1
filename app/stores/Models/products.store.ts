@@ -81,6 +81,27 @@ export const useProductsStore = defineStore('products', () => {
     }
   }
 
+  /**
+   * Réservée à l'admin (backoffice) — résolution directe par UUID, jamais
+   * par slug. Voir products.service.ts::showById() pour le pourquoi.
+   */
+  async function fetchProductById(id: string, include?: string): Promise<ProductDetailData | null> {
+    loadingProduct.value = true
+    error.value          = null
+
+    try {
+      const product = await productsService.showById(id, include)
+      currentProduct.value = product ?? null
+      return currentProduct.value
+    } catch (e: any) {
+      error.value = e?.response?.data?.errors?.[0]?.detail ?? 'Produit introuvable.'
+      currentProduct.value = null
+      return null
+    } finally {
+      loadingProduct.value = false
+    }
+  }
+
   async function fetchCategories(): Promise<CategoryData[]> {
     try {
       const data = await categoriesService.list()
@@ -179,6 +200,7 @@ export const useProductsStore = defineStore('products', () => {
     // actions
     fetchProducts,
     fetchProductBySlug,
+    fetchProductById,
     fetchCategories,
     createProduct,
     updateProduct,

@@ -20,7 +20,7 @@ async function onSubmit(data: ProductFormData) {
   }
 
   notify('Produit créé avec succès.', 'success')
-  navigateTo(`/backoffice/products/${result.slug}`)
+  navigateTo(`/backoffice/products/${result.id}`)
 }
 </script>
 

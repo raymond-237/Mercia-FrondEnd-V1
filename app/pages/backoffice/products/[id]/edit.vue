@@ -15,6 +15,14 @@ const submitError = ref('')
 const initialData = computed(() => {
   if (!product.value) return undefined
 
+  // Reconstruit les variantes réelles (avec leur vrai stock depuis
+  // l'inventaire) pour que le formulaire les affiche et permette de
+  // les modifier/supprimer — plus le TODO placeholder d'avant.
+  //
+  // costPrice ajouté ici : la donnée était déjà exposée par
+  // mapProductToDetail() côté service, juste jamais relue dans ce
+  // mapping — le prix de revient était bien sauvegardé en base mais
+  // n'apparaissait jamais au ré-ouvrir du formulaire d'édition.
   const variants = (product.value.variants ?? product.value.productVariants ?? []).map((v: any) => ({
     id: v.id,
     key: v.id,
@@ -25,7 +33,9 @@ const initialData = computed(() => {
     stock: v.stockQuantity ?? v.inventory?.quantity ?? 0,
   }))
 
-
+  // Reconstruit un type d'option unique "Variante" à partir des noms
+  // existants, pour que la génération automatique ne les efface pas
+  // tant que l'utilisateur n'a rien changé côté options.
   const optionTypes = variants.length
     ? [{ id: crypto.randomUUID(), name: 'Variante', values: variants.map((v: any) => v.label) }]
     : []
@@ -50,25 +60,40 @@ const initialData = computed(() => {
 })
 
 const loadProduct = async () => {
+  loading.value  = true
+  notFound.value = false
+
   try {
-    const data = await productsStore.fetchProductBySlug(
+    const data = await productsStore.fetchProductById(
       route.params.id as string,
       'medias,category,productVariants,productVariants.inventory,optionTypes',
     )
-    if (!data) { notFound.value = true; return }
+    if (!data) { notFound.value = true; product.value = null; return }
     product.value = data
   } catch (e) {
     console.error('Erreur chargement produit édition:', e)
     notFound.value = true
+    product.value = null
   } finally {
     loading.value = false
   }
 }
 onMounted(loadProduct)
 
+// Même bug que sur la page détail : sans ce watch, passer directement du
+// formulaire d'édition du produit A à celui du produit B (navigation SPA,
+// même route réutilisée) laissait le formulaire pré-rempli avec les
+// données de A alors que l'URL affichait déjà B.
+watch(() => route.params.id, (newId, oldId) => {
+  if (newId && newId !== oldId) loadProduct()
+})
+
 async function onSubmit(data: ProductFormData) {
   submitError.value = ''
-  const result = await productsStore.updateProduct(route.params.slug as string, data)
+  // Bug corrigé : route.params.slug n'existe pas sur cette route (le
+  // paramètre s'appelle "id" partout ailleurs dans ce fichier) — ça
+  // envoyait systématiquement undefined comme identifiant à updateProduct().
+  const result = await productsStore.updateProduct(route.params.id as string, data)
 
   if (!result) {
     submitError.value = productsStore.error ?? 'Impossible de modifier le produit.'

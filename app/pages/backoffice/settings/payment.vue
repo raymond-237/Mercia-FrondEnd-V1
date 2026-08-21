@@ -117,7 +117,7 @@ async function onSubmit() {
         </div>
 
         <template v-if="form.paypal.enabled">
-          <v-text-field
+          <v-text-field 
             v-model="form.paypal.clientId" label="Client ID"
             variant="solo-filled" flat rounded="xl" density="comfortable" class="mb-3"
           >

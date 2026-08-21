@@ -10,21 +10,35 @@ const product  = ref<any>(null)
 const activeImage = ref(0)
 
 const loadProduct = async () => {
+  loading.value  = true
+  notFound.value = false
+  activeImage.value = 0
+
   try {
-    const data = await productsStore.fetchProductBySlug(
+    const data = await productsStore.fetchProductById(
       route.params.id as string,
       'medias,category,productVariants.inventory,optionTypes',
     )
-    if (!data) { notFound.value = true; return }
+    if (!data) { notFound.value = true; product.value = null; return }
     product.value = data
   } catch (e) {
     console.error('Erreur chargement détail produit:', e)
     notFound.value = true
+    product.value = null
   } finally {
     loading.value = false
   }
 }
 onMounted(loadProduct)
+
+// Sans ça, naviguer d'une fiche produit à une autre (clic depuis la liste,
+// ou lien direct) sans passer par un rechargement complet de page ne
+// redéclenche jamais le fetch — Vue Router réutilise le même composant
+// puisque c'est la même route, seul route.params.id change. L'ancien
+// produit restait affiché malgré une URL différente.
+watch(() => route.params.id, (newId, oldId) => {
+  if (newId && newId !== oldId) loadProduct()
+})
 
 const images = computed(() => product.value?.medias?.map((m: any) => m.url) ?? (product.value?.imageUrl ? [product.value.imageUrl] : []))
 
