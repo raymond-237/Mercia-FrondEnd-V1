@@ -131,9 +131,9 @@ function onNavigate() {
       </button> -->
         <UiLogoutBtn>
                   <template #action="{ logout }">
-                    <button class="logout-btn" @click="logout">
+                    <button class="logout-btn" @click="logout" :title="sidebarCollapsed ? 'Déconnexion' : undefined">
                       <Icon icon="solar:logout-3-line-duotone" width="22" />
-                      Déconnexion
+                       <span v-if="!sidebarCollapsed">Déconnexion</span>
                     </button>
                   </template>
         </UiLogoutBtn>

@@ -67,6 +67,9 @@ function mapProductToCardData(raw: any): ProductCardData {
     defaultVariantId: defaultVariant?.id ?? '',
     minQuantity:      raw.minQuantity ?? 1,
     maxQuantity:      raw.maxQuantity ?? null,
+    // Absent jusqu'ici — sans lui, impossible d'afficher visuellement
+    // qu'un produit est archivé/brouillon dans la liste admin.
+    status:           raw.status ?? 'draft',
   } as ProductCardData
 }
 
@@ -245,6 +248,11 @@ export default function useProductsService() {
    * ailleurs). Remplace l'ancienne route storefront/products/{slug}
    * qui contournait la résolution tenant et renvoyait systématiquement
    * 404 en conditions réelles.
+   *
+   * RÉSERVÉ à la boutique publique (URLs SEO-friendly /shop/{slug}) —
+   * jamais pour l'admin, qui navigue par UUID. Voir showById() juste
+   * en dessous pour l'admin : les confondre recrée le bug "mauvais
+   * produit affiché" (filter[slug]=<uuid> ne matche jamais rien).
    */
   const show = async (idOrSlug: string, include?: string): Promise<ProductDetailData | null> => {
     const response: AxiosResponse = await request('products', {
@@ -263,7 +271,7 @@ export default function useProductsService() {
     return mapProductToDetail(product)
   }
 
-    /**
+  /**
    * GET /api/v1/products/{id} — résolution DIRECTE par UUID, réservée à
    * l'admin (backoffice navigue toujours par id, jamais par slug). Route
    * ressource JSON:API standard, aucune ambiguïté de filtre possible.
@@ -273,10 +281,10 @@ export default function useProductsService() {
       method: 'get',
       params: { include },
     })
- 
+
     const raw = JsonaDeserialize<any>(response.data)
     if (!raw) return null
- 
+
     return mapProductToDetail(raw)
   }
 
@@ -339,6 +347,20 @@ export default function useProductsService() {
     await request(`product-variants/${variantId}`, { method: 'delete' })
   }
 
+  /**
+   * POST /api/v1/products/{product}/archive
+   */
+  const archive = async (id: string): Promise<void> => {
+    await request(`products/${id}/archive`, { method: 'post' })
+  }
+
+  /**
+   * DELETE /api/v1/products/{product}
+   */
+  const remove = async (id: string): Promise<void> => {
+    await request(`products/${id}`, { method: 'delete' })
+  }
+
   return {
     list,
     show,
@@ -348,5 +370,7 @@ export default function useProductsService() {
     createVariant,
     updateVariant,
     deleteVariant,
+    archive,
+    remove,
   }
 }

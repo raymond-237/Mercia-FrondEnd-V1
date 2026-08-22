@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { notify } from '~/@cores/constantes/helpers'
 import { useProductsStore } from '~/stores/Models/products.store'
 
 const route = useRoute()
@@ -162,6 +163,33 @@ const insights = computed<Insight[]>(() => {
 
   return list
 })
+
+// ── Archiver / Supprimer
+
+async function archiveThisProduct() {
+  if (!product.value) return
+  const success = await productsStore.archiveProduct(product.value.id)
+  if (success) product.value.status = 'archived'
+  notify(
+    success ? 'Produit archivé avec succès.' : (productsStore.error ?? 'Impossible d\'archiver le produit.'),
+    success ? 'success' : 'error',
+  )
+}
+
+const deleteConfirmOpen = ref(false)
+
+async function confirmDeleteThisProduct() {
+  if (!product.value) return
+  deleteConfirmOpen.value = false
+
+  const success = await productsStore.deleteProduct(product.value.id)
+  if (success) {
+    notify('Produit supprimé avec succès.', 'success')
+    navigateTo('/backoffice/products')
+  } else {
+    notify(productsStore.error ?? 'Impossible de supprimer le produit.', 'error')
+  }
+}
 </script>
 
 <template>
@@ -190,17 +218,31 @@ const insights = computed<Insight[]>(() => {
             <Icon icon="solar:copy-line-duotone" width="16" style="margin-right: 8px;" />
             Dupliquer
           </v-list-item>
-          <v-list-item>
+          <v-list-item @click="archiveThisProduct">
             <Icon icon="solar:archive-line-duotone" width="16" style="margin-right: 8px;" />
             Archiver
           </v-list-item>
-          <v-list-item class="danger-item">
+          <v-list-item class="danger-item" @click="deleteConfirmOpen = true">
             <Icon icon="solar:trash-bin-trash-line-duotone" width="16" style="margin-right: 8px;" />
             Supprimer
           </v-list-item>
         </v-list>
       </v-menu>
     </UiBreadCrumbs>
+
+    <v-dialog v-model="deleteConfirmOpen" max-width="360">
+      <v-card rounded="xl" class="pa-2">
+        <v-card-title class="text-body-1 font-weight-bold">Supprimer ce produit ?</v-card-title>
+        <v-card-text class="text-body-2">
+          "{{ product?.name }}" sera définitivement supprimé, y compris ses variantes et médias associés. Cette action est irréversible.
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="deleteConfirmOpen = false">Annuler</v-btn>
+          <v-btn color="error" variant="flat" rounded="xl" @click="confirmDeleteThisProduct">Supprimer</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
 
     <div v-if="loading" class="loading-block">
       <v-progress-circular indeterminate color="secondary" size="28" />

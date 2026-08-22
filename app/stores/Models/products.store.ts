@@ -102,6 +102,47 @@ export const useProductsStore = defineStore('products', () => {
     }
   }
 
+  /**
+   * Archive un produit — le retire de la vente sans le supprimer. Met à
+   * jour la liste ET le détail en cours si c'est le même produit, pour
+   * refléter le nouveau statut immédiatement sans recharger.
+   */
+  async function archiveProduct(id: string): Promise<boolean> {
+    saving.value = true
+    error.value  = null
+    try {
+      await productsService.archive(id)
+      const item = products.value.find(p => p.id === id)
+      if (item) (item as any).status = 'archived'
+      if (currentProduct.value?.id === id) currentProduct.value.status = 'archived'
+      return true
+    } catch (e: any) {
+      error.value = e?.response?.data?.errors?.[0]?.detail ?? 'Impossible d\'archiver le produit.'
+      return false
+    } finally {
+      saving.value = false
+    }
+  }
+
+  /**
+   * Supprime définitivement un produit — retire immédiatement de la liste
+   * locale, pas besoin d'un fetchProducts() complet juste pour ça.
+   */
+  async function deleteProduct(id: string): Promise<boolean> {
+    saving.value = true
+    error.value  = null
+    try {
+      await productsService.remove(id)
+      products.value = products.value.filter(p => p.id !== id)
+      return true
+    } catch (e: any) {
+      error.value = e?.response?.data?.errors?.[0]?.detail ?? 'Impossible de supprimer le produit.'
+      return false
+    } finally {
+      saving.value = false
+    }
+  }
+
   async function fetchCategories(): Promise<CategoryData[]> {
     try {
       const data = await categoriesService.list()
@@ -204,6 +245,8 @@ export const useProductsStore = defineStore('products', () => {
     fetchCategories,
     createProduct,
     updateProduct,
+    archiveProduct,
+    deleteProduct,
   }
 })
 

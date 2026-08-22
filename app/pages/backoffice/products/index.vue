@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { notify } from '~/@cores/constantes/helpers'
 import { useCategoriesStore } from '~/stores/Models/category.store'
 import { useProductsStore } from '~/stores/Models/products.store'
 import type { ProductCardData } from '~/types/public/index.type'
@@ -32,6 +33,12 @@ const SORT_OPTIONS = [
 ]
 
 const filterStock = ref<'all' | 'active' | 'low_stock' | 'out_of_stock'>('all')
+
+// Masqués par défaut — comme partout ailleurs (Shopify, etc.), un produit
+// archivé ne doit pas polluer la liste principale sans action explicite.
+const showArchived = ref(false)
+
+const statusLabel: Record<string, string> = { draft: 'Brouillon', active: 'Publié', archived: 'Archivé' }
 
 const currentPage = ref(1)
 const totalPages  = ref(1)
@@ -91,10 +98,16 @@ const SUMMARY_CARDS = [
 ]
 
 const filteredProducts = computed(() => {
-  if (filterStock.value === 'all') return products.value
-  if (filterStock.value === 'active')    return products.value.filter(p => p.stockQuantity > p.lowStockThreshold)
-  if (filterStock.value === 'low_stock') return products.value.filter(p => p.stockQuantity > 0 && p.stockQuantity <= p.lowStockThreshold)
-  return products.value.filter(p => p.stockQuantity === 0)
+  let list = products.value
+
+  if (!showArchived.value) {
+    list = list.filter(p => (p as any).status !== 'archived')
+  }
+
+  if (filterStock.value === 'all') return list
+  if (filterStock.value === 'active')    return list.filter(p => p.stockQuantity > p.lowStockThreshold)
+  if (filterStock.value === 'low_stock') return list.filter(p => p.stockQuantity > 0 && p.stockQuantity <= p.lowStockThreshold)
+  return list.filter(p => p.stockQuantity === 0)
 })
 
 function toggleStockFilter(key: typeof filterStock.value) {
@@ -189,6 +202,39 @@ function onKeydown(e: KeyboardEvent) {
 }
 onMounted(() => window.addEventListener('keydown', onKeydown))
 onUnmounted(() => window.removeEventListener('keydown', onKeydown))
+
+// ── Archiver / Supprimer — les boutons existaient déjà dans les menus
+// (table + cards) mais n'avaient jamais de @click.
+
+async function archiveProduct(p: ProductCardData, e: Event) {
+  e.stopPropagation()
+  const success = await productsStore.archiveProduct(p.id)
+  notify(
+    success ? 'Produit archivé avec succès.' : (productsStore.error ?? 'Impossible d\'archiver le produit.'),
+    success ? 'success' : 'error',
+  )
+}
+
+// Suppression irréversible — confirmation obligatoire avant d'appeler
+// deleteProduct(), contrairement à l'archivage qui est réversible.
+const deleteTarget = ref<ProductCardData | null>(null)
+
+function askDelete(p: ProductCardData, e: Event) {
+  e.stopPropagation()
+  deleteTarget.value = p
+}
+
+async function confirmDelete() {
+  if (!deleteTarget.value) return
+  const target = deleteTarget.value
+  deleteTarget.value = null
+
+  const success = await productsStore.deleteProduct(target.id)
+  notify(
+    success ? 'Produit supprimé avec succès.' : (productsStore.error ?? 'Impossible de supprimer le produit.'),
+    success ? 'success' : 'error',
+  )
+}
 </script>
 
 <template>
@@ -246,9 +292,17 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
         <v-chip v-if="activeFilterCount" size="x-small" color="secondary" class="ml-2">{{ activeFilterCount }}</v-chip>
       </v-btn>
 
-    
+ 
       <v-btn icon variant="tonal" size="small" color="secondary" rounded="xl" :loading="loading" @click="loadProducts">
         <Icon icon="solar:refresh-line-duotone" width="18" />
+      </v-btn>
+
+      <v-btn
+        variant="tonal" :color="showArchived ? 'secondary' : undefined" rounded="xl"
+        @click="showArchived = !showArchived"
+      >
+        <Icon icon="solar:archive-line-duotone" width="18" style="margin-right: 6px;" />
+        <span class="hide-mobile-text">Archivés</span>
       </v-btn>
 
       <v-btn-toggle v-model="viewMode" mandatory density="comfortable" color="secondary" rounded="xl" class="hide-mobile">
@@ -293,7 +347,12 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
                   <Icon icon="solar:box-line-duotone" width="18" />
                 </div>
                 <div>
-                  <div class="product-name">{{ p.name }}</div>
+                  <div class="product-name">
+                    {{ p.name }}
+                    <span v-if="(p as any).status !== 'active'" class="status-badge" :class="(p as any).status">
+                      {{ statusLabel[(p as any).status] ?? (p as any).status }}
+                    </span>
+                  </div>
                   <div class="product-variant">{{ p.variantName }}</div>
                 </div>
               </div>
@@ -320,11 +379,11 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
                     <Icon icon="solar:cart-line-duotone" width="16" style="margin-right: 8px;" />
                     Voir sur la boutique
                   </v-list-item>
-                  <v-list-item>
+                  <v-list-item @click="archiveProduct(p, $event)">
                     <Icon icon="solar:archive-line-duotone" width="16" style="margin-right: 8px;" />
                     Archiver
                   </v-list-item>
-                  <v-list-item class="danger-item">
+                  <v-list-item class="danger-item" @click="askDelete(p, $event)">
                     <Icon icon="solar:trash-bin-trash-line-duotone" width="16" style="margin-right: 8px;" />
                     Supprimer
                   </v-list-item>
@@ -358,6 +417,9 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
           </div>
 
           <span class="stock-badge floating" :class="stockStatus(p).class">{{ stockStatus(p).label }}</span>
+          <span v-if="(p as any).status !== 'active'" class="status-badge floating" :class="(p as any).status">
+            {{ statusLabel[(p as any).status] ?? (p as any).status }}
+          </span>
 
           <template v-if="getImages(p).length > 1">
             <button class="carousel-arrow left" @click.stop="prevImage(p, $event)">
@@ -404,11 +466,11 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
                 <Icon icon="solar:cart-line-duotone" width="16" style="margin-right: 8px;" />
                 Voir sur la boutique
               </v-list-item>
-              <v-list-item>
+              <v-list-item @click="archiveProduct(p, $event)">
                 <Icon icon="solar:archive-line-duotone" width="16" style="margin-right: 8px;" />
                 Archiver
               </v-list-item>
-              <v-list-item class="danger-item">
+              <v-list-item class="danger-item" @click="askDelete(p, $event)">
                 <Icon icon="solar:trash-bin-trash-line-duotone" width="16" style="margin-right: 8px;" />
                 Supprimer
               </v-list-item>
@@ -463,6 +525,20 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
         </div>
       </div>
     </v-navigation-drawer>
+
+    <v-dialog v-model="deleteTarget" max-width="360">
+      <v-card v-if="deleteTarget" rounded="xl" class="pa-2">
+        <v-card-title class="text-body-1 font-weight-bold">Supprimer ce produit ?</v-card-title>
+        <v-card-text class="text-body-2">
+          "{{ deleteTarget.name }}" sera définitivement supprimé, y compris ses variantes et médias associés. Cette action est irréversible.
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="deleteTarget = null">Annuler</v-btn>
+          <v-btn color="error" variant="flat" rounded="xl" @click="confirmDelete">Supprimer</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
 
     <v-dialog v-model="lightboxOpen" fullscreen transition="fade-transition" class="lightbox-dialog">
       <div v-if="lightboxProduct" class="lightbox" @click.stop>
@@ -603,6 +679,17 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   background: rgba(250, 250, 248, 0.92);
   backdrop-filter: blur(4px);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.status-badge { display: inline-flex; padding: 3px 9px; border-radius: var(--r-full); font-size: 10px; font-weight: 700; margin-left: 6px; vertical-align: middle; }
+.status-badge.draft    { background: rgba(var(--v-theme-on-surface), 0.08); color: rgb(var(--v-theme-on-surface-variant)); }
+.status-badge.archived { background: rgba(192, 83, 62, 0.12); color: #C0533E; }
+.status-badge.floating {
+  position: absolute; top: 10px; left: 10px; z-index: 2;
+  background: rgba(250, 250, 248, 0.92);
+  backdrop-filter: blur(4px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  margin-left: 0;
 }
 
 .row-clickable { cursor: pointer; }
