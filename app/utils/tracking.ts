@@ -1,5 +1,13 @@
+import { CARRIERS } from "~/@cores/constantes/carriers";
 import type { TrackingResult } from "~/types/Models/Ordertracking";
 
+
+
+export function buildTrackingUrl(carrierCode: string, trackingNumber: string): string | null {
+  const carrier = CARRIERS.find(c => c.code === carrierCode)
+  if (!carrier || !trackingNumber) return null
+  return carrier.trackingUrlPattern.replace('{trackingNumber}', encodeURIComponent(trackingNumber))
+}
 export function mapTrackingResult(data: any): TrackingResult {
   return {
     orderNumber: data.orderNumber,

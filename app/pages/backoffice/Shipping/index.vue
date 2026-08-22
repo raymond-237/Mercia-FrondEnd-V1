@@ -118,6 +118,10 @@ function openEditMethod(method: any) {
     pickupHours: method.pickupHours ?? '',
     pickupInstructions: method.pickupInstructions ?? '',
     pickupPhone: method.pickupPhone ?? '',
+    // Même oubli que les 5 champs pickup au-dessus — sans lui, rouvrir
+    // une méthode existante pour édition perdait sa config de paiements
+    // autorisés et repartait sur le défaut du formulaire.
+    allowedPaymentMethods: method.allowedPaymentMethods ?? [],
   }
   methodDrawerOpen.value = true
 }

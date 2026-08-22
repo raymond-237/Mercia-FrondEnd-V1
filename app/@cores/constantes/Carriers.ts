@@ -16,8 +16,3 @@ export const CARRIERS: Carrier[] = [
   { code: 'inpost',         name: 'InPost (point relais)', trackingUrlPattern: 'https://inpost.it/tracking/{trackingNumber}' },
 ]
 
-export function buildTrackingUrl(carrierCode: string, trackingNumber: string): string | null {
-  const carrier = CARRIERS.find(c => c.code === carrierCode)
-  if (!carrier || !trackingNumber) return null
-  return carrier.trackingUrlPattern.replace('{trackingNumber}', encodeURIComponent(trackingNumber))
-}

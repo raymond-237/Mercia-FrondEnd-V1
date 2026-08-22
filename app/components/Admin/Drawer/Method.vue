@@ -66,6 +66,12 @@ const vIsPickup = computed({
   set: (v: boolean) => { vType.value = v ? 'pickup' : 'delivery' },
 })
 
+// Défaut sensé selon le type — pickup propose cash d'office, la livraison
+// classique ne le propose jamais tant qu'on ne repasse pas en pickup.
+function defaultPaymentMethods(type: 'delivery' | 'pickup'): string[] {
+  return type === 'pickup' ? ['cash', 'paypal', 'bank_transfer'] : ['paypal', 'bank_transfer']
+}
+
 const form = reactive<ShippingMethodFormData>({
   name: props.initialData?.name ?? '',
   carrierCode: props.initialData?.carrierCode ?? '',
@@ -81,6 +87,8 @@ const form = reactive<ShippingMethodFormData>({
   pickupHours: props.initialData?.pickupHours ?? '',
   pickupInstructions: props.initialData?.pickupInstructions ?? '',
   pickupPhone: props.initialData?.pickupPhone ?? '',
+  allowedPaymentMethods: props.initialData?.allowedPaymentMethods
+    ?? defaultPaymentMethods(props.initialData?.methodType ?? 'delivery'),
 })
 
 watch(vName, (v) => { form.name = v })
@@ -90,8 +98,6 @@ watch(vMinDays, (v) => { form.minDays = v })
 watch(vMaxDays, (v) => { form.maxDays = v })
 watch(vType, (v) => {
   form.methodType = v
-  // Si on désactive le ramassage, on vide les champs pour ne pas
-  // envoyer des données obsolètes/fantômes au backend.
   if (v !== 'pickup') {
     form.pickupAddress = ''
     form.pickupHours = ''
@@ -99,10 +105,25 @@ watch(vType, (v) => {
     form.pickupPhone = ''
     vPickupAddress.value = ''
     vPickupPhone.value = ''
+    form.allowedPaymentMethods = form.allowedPaymentMethods.filter(m => m !== 'cash')
+  } else if (!form.allowedPaymentMethods.includes('cash')) {
+    form.allowedPaymentMethods = [...form.allowedPaymentMethods, 'cash']
   }
 })
 watch(vPickupAddress, (v) => { form.pickupAddress = v ?? '' })
 watch(vPickupPhone, (v) => { form.pickupPhone = v ?? '' })
+
+function togglePaymentMethod(method: string) {
+  const idx = form.allowedPaymentMethods.indexOf(method)
+  if (idx === -1) form.allowedPaymentMethods.push(method)
+  else form.allowedPaymentMethods.splice(idx, 1)
+}
+
+const PAYMENT_OPTIONS = [
+  { value: 'paypal',        label: 'PayPal',            icon: 'solar:card-line-duotone' },
+  { value: 'bank_transfer', label: 'Virement bancaire', icon: 'solar:banknote-2-line-duotone' },
+  { value: 'cash',          label: 'Espèces',           icon: 'solar:wallet-money-line-duotone', pickupOnly: true },
+]
 
 const zoneOptions = computed(() => props.zones.map(z => ({ title: z.name, value: z.id })))
 
@@ -121,6 +142,8 @@ watch(() => props.initialData, (data) => {
   form.pickupHours              = data?.pickupHours ?? ''
   form.pickupInstructions        = data?.pickupInstructions ?? ''
   form.pickupPhone                = data?.pickupPhone ?? ''
+  form.allowedPaymentMethods        = data?.allowedPaymentMethods
+    ?? defaultPaymentMethods(data?.methodType ?? 'delivery')
   resetForm({ values: {
     name: data?.name ?? '', price: data?.price ?? null, zone: data?.zone ?? null,
     minDays: data?.minDays ?? null, maxDays: data?.maxDays ?? null,
@@ -187,7 +210,6 @@ async function onSubmit() {
           <template #prepend-inner><Icon icon="solar:link-line-duotone" width="18" /></template>
         </v-text-field>
 
-        <!-- Ramassage en magasin — bloc dédié, isolé visuellement des champs de livraison classique -->
         <div class="pickup-block" :class="{ 'pickup-block--active': vIsPickup }">
           <div class="toggle-row toggle-row--pickup">
             <div class="toggle-row-label">
@@ -208,13 +230,6 @@ async function onSubmit() {
               >
                 <template #prepend-inner><Icon icon="solar:map-point-line-duotone" width="18" /></template>
               </v-text-field>
-
-              <!-- <v-text-field
-                v-model="vPickupPhone" label="Téléphone de contact" :error-messages="errPickupPhone"
-                placeholder="Ex: +39 02 1234 5678" variant="solo-filled" flat rounded="xl" density="comfortable" class="mb-3"
-              >
-                <template #prepend-inner><Icon icon="solar:phone-line-duotone" width="18" /></template>
-              </v-text-field> -->
 
                 <UiPhoneInput
                 v-model="vPickupPhone"
@@ -240,6 +255,34 @@ async function onSubmit() {
               </v-textarea>
             </div>
           </v-expand-transition>
+        </div>
+
+        <div class="payment-block">
+          <div class="payment-block-title">
+            <Icon icon="solar:card-line-duotone" width="16" />
+            Paiements autorisés
+          </div>
+          <div class="payment-options">
+            <button
+              v-for="opt in PAYMENT_OPTIONS" :key="opt.value"
+              type="button"
+              class="payment-chip"
+              :class="{
+                active: form.allowedPaymentMethods.includes(opt.value),
+                disabled: opt.pickupOnly && !vIsPickup,
+              }"
+              :disabled="opt.pickupOnly && !vIsPickup"
+              @click="togglePaymentMethod(opt.value)"
+            >
+              <Icon :icon="opt.icon" width="16" />
+              {{ opt.label }}
+              <Icon v-if="form.allowedPaymentMethods.includes(opt.value)" icon="solar:check-circle-bold-duotone" width="14" class="payment-chip-check" />
+            </button>
+          </div>
+          <p v-if="!vIsPickup" class="payment-hint">
+            <Icon icon="solar:info-circle-line-duotone" width="12" />
+            Espèces réservé aux méthodes de ramassage en magasin.
+          </p>
         </div>
 
         <div class="toggle-row">
@@ -284,6 +327,43 @@ async function onSubmit() {
 .pickup-block--active { border-color: rgb(var(--v-theme-secondary)); }
 .toggle-row--pickup { background: transparent; margin-top: 0; }
 .pickup-fields { padding: 12px 12px 4px; }
+
+.payment-block {
+  background: rgb(var(--v-theme-surface-variant));
+  border-radius: var(--r-lg);
+  padding: 14px 16px;
+  margin-top: 10px;
+  margin-bottom: 6px;
+}
+.payment-block-title {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+  color: rgb(var(--v-theme-on-surface-variant));
+  margin-bottom: 10px;
+}
+.payment-options { display: flex; flex-wrap: wrap; gap: 8px; }
+.payment-chip {
+  display: flex; align-items: center; gap: 6px;
+  background: rgb(var(--v-theme-surface));
+  border: 1.5px solid transparent; border-radius: var(--r-full);
+  padding: 7px 12px 7px 14px; font-size: 12px; font-weight: 700;
+  color: rgb(var(--v-theme-on-surface-variant));
+  cursor: pointer; transition: border-color .2s, color .2s;
+}
+.payment-chip.active {
+  border-color: rgb(var(--v-theme-secondary));
+  color: rgb(var(--v-theme-secondary));
+}
+.payment-chip.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.payment-chip-check { color: rgb(var(--v-theme-secondary)); }
+.payment-hint {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 10.5px; color: rgb(var(--v-theme-on-surface-variant));
+  margin: 8px 0 0;
+}
 
 .drawer-foot { display: flex; gap: 10px; padding: 16px 20px; border-top: 1px solid rgba(var(--v-theme-on-surface), 0.06); }
 </style>

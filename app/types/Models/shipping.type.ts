@@ -19,6 +19,7 @@ export interface ShippingMethodFormData {
   price: number
   freeAbove: number | null
   isActive: boolean
+  allowedPaymentMethods: string[]
   zone: string // id de la zone
 }
 
