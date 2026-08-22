@@ -1,4 +1,4 @@
-import { buildTrackingUrl } from '~/@cores/constantes/carriers'
+import { buildTrackingUrl } from '~/types/public/carriers.type'
 
 export interface TrackingResult {
   orderNumber: string
