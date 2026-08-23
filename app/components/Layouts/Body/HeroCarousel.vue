@@ -25,9 +25,9 @@ interface SlideMeta {
 }
 
 const staticSlidesMeta: SlideMeta[] = [
-  { id: 1, ctaTo: '/shop', ctaSecondaryTo: '/guide',     image: 'https://images.unsplash.com/photo-1522338242992-e1a54906a8da?w=1200&q=85', tone: 'secondary' },
-  { id: 2, ctaTo: '/shop', ctaSecondaryTo: '/guide',     image: 'https://images.unsplash.com/photo-1595959183082-7b570b7e08e2?w=1200&q=85', tone: 'primary' },
-  { id: 3, ctaTo: '/shop', ctaSecondaryTo: '/livraison', image: 'https://images.unsplash.com/photo-1605980776566-0486c3ac7617?w=1200&q=85', tone: 'secondary' },
+  { id: 1, ctaTo: '/shop', ctaSecondaryTo: '#',     image: 'https://images.unsplash.com/photo-1522338242992-e1a54906a8da?w=1200&q=85', tone: 'secondary' },
+  { id: 2, ctaTo: '/shop', ctaSecondaryTo: '#',     image: 'https://images.unsplash.com/photo-1595959183082-7b570b7e08e2?w=1200&q=85', tone: 'primary' },
+  // { id: 3, ctaTo: '/shop', ctaSecondaryTo: '/livraison', image: 'https://images.unsplash.com/photo-1605980776566-0486c3ac7617?w=1200&q=85', tone: 'secondary' },
 ]
 
 const staticSlides = computed<Slide[]>(() => staticSlidesMeta.map((s, i) => ({
