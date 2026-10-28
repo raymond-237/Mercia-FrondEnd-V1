@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { notify } from '~/@cores/constantes/helpers'
 import { useAdminSettingsStore } from '~/stores/Models/settings.store'
-import type { HeroSlide } from '~/types/Models/settings.type'
+import type { HeroSlide, HeroSlideForm } from '~/types/Models/settings.type'
 
 definePageMeta({ layout: 'admin' })
 
@@ -9,31 +9,32 @@ const store = useAdminSettingsStore()
 
 const MAX_SLIDES = 5
 
-function makeEmptySlide(order: number): HeroSlide {
+function makeEmptySlide(): HeroSlideForm {
   return {
     id: `new-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    imageUrl: null,
     sourceType: 'upload',
+    image: null,
     title: '',
     subtitle: '',
     ctaLabel: '',
-    ctaLink: '',
+    ctaTo: '',
+    tone: 'secondary',
     isActive: true,
-    order,
   }
 }
-
-const slides = ref<HeroSlide[]>([])
+const slides = ref<HeroSlideForm[]>([])
 const uploadingId = ref<string | null>(null)
 const expandedId = ref<string | null>(null)
 const fileInputs = ref<Record<string, HTMLInputElement | null>>({})
 
 watch(() => store.settings, (s) => {
   if (!s) return
-  slides.value = (s.hero?.slides ?? [])
-    .slice()
-    .sort((a, b) => a.order - b.order)
-    .map(slide => ({ ...slide, sourceType: slide.sourceType ?? 'url' }))
+
+  slides.value = (s.heroSlides ?? []).map((slide, i) => ({
+    ...slide,
+    id: `slide-${i}-${Date.now()}`,
+    sourceType: 'url',
+  }))
 }, { immediate: true })
 
 onMounted(() => {
@@ -45,13 +46,14 @@ const activeCount = computed(() => slides.value.filter(s => s.isActive).length)
 
 function addSlide() {
   if (!canAddSlide.value) return
-  const slide = makeEmptySlide(slides.value.length)
+  const slide = makeEmptySlide()
   slides.value.push(slide)
   expandedId.value = slide.id
 }
 
 function removeSlide(id: string) {
-  slides.value = slides.value.filter(s => s.id !== id).map((s, i) => ({ ...s, order: i }))
+  slides.value = slides.value.filter(s => s.id !== id)
+    // .map((s, i) => ({ ...s, order: i }))
   if (expandedId.value === id) expandedId.value = null
 }
 
@@ -64,14 +66,15 @@ function moveSlide(index: number, dir: -1 | 1) {
   if (target < 0 || target >= slides.value.length) return
   const arr = [...slides.value]
   ;[arr[index], arr[target]] = [arr[target], arr[index]]
-  slides.value = arr.map((s, i) => ({ ...s, order: i }))
+  slides.value = arr
+    // .map((s, i) => ({ ...s, order: i }))
 }
 
 function triggerFileInput(id: string) {
   fileInputs.value[id]?.click()
 }
 
-async function onFileSelected(slide: HeroSlide, event: Event) {
+async function onFileSelected(slide: HeroSlideForm, event: Event) {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
   if (!file) return
@@ -92,14 +95,14 @@ async function onFileSelected(slide: HeroSlide, event: Event) {
   uploadingId.value = null
 
   if (url) {
-    slide.imageUrl = url
+    slide.image = url
   } else {
     notify({ message: "Échec de l'upload de l'image.", color: 'error', timeout: 3000 })
   }
   input.value = ''
 }
 
-const invalidSlides = computed(() => slides.value.filter(s => !s.imageUrl))
+const invalidSlides = computed(() => slides.value.filter(s => !s.image))
 
 async function onSubmit() {
   if (invalidSlides.value.length > 0) {
@@ -107,8 +110,8 @@ async function onSubmit() {
     return
   }
 
-  const payload = slides.value.map((s, i) => ({ ...s, order: i }))
-  const success = await store.saveHeroSlides(payload)
+  // const payload = slides.value.map((s, i) => ({ ...s, order: i }))
+  const success = await store.saveHeroSlides(slides.value)
 
   notify({
     message: success ? 'Carrousel hero enregistré.' : (store.error ?? 'Une erreur est survenue.'),
@@ -159,20 +162,20 @@ async function onSubmit() {
       <div v-else class="slides-list">
         <div
           v-for="(slide, index) in slides" :key="slide.id"
-          class="slide-card" :class="{ 'slide-card--inactive': !slide.isActive, 'slide-card--invalid': !slide.imageUrl }"
+          class="slide-card" :class="{ 'slide-card--inactive': !slide.isActive, 'slide-card--invalid': !slide.image }"
         >
           <!-- Ligne résumé, toujours visible -->
           <div class="slide-summary" @click="toggleExpand(slide.id)">
             <div class="slide-thumb">
               <v-progress-circular v-if="uploadingId === slide.id" indeterminate color="secondary" size="22" />
-              <img v-else-if="slide.imageUrl" :src="slide.imageUrl" alt="" />
+              <img v-else-if="slide.image" :src="slide.image" alt="" />
               <Icon v-else icon="solar:gallery-add-line-duotone" width="20" />
             </div>
 
             <div class="slide-summary-info">
               <div class="slide-summary-title">
                 {{ slide.title || `Slide ${index + 1}` }}
-                <Icon v-if="!slide.imageUrl" icon="solar:danger-triangle-line-duotone" width="14" class="warn-icon" />
+                <Icon v-if="!slide.image" icon="solar:danger-triangle-line-duotone" width="14" class="warn-icon" />
               </div>
               <div class="slide-summary-sub">{{ slide.isActive ? 'Active' : 'Inactive' }}</div>
             </div>
@@ -202,9 +205,9 @@ async function onSubmit() {
           <v-expand-transition>
             <div v-if="expandedId === slide.id" class="slide-details">
 
-              <div class="image-preview" :class="{ 'image-preview--empty': !slide.imageUrl }">
+              <div class="image-preview" :class="{ 'image-preview--empty':slide.image }">
                 <v-progress-circular v-if="uploadingId === slide.id" indeterminate color="secondary" size="28" />
-                <img v-else-if="slide.imageUrl" :src="slide.imageUrl" alt="" />
+                <img v-else-if="slide.image" :src="slide.image" alt="" />
                 <div v-else class="image-preview-placeholder">
                   <Icon icon="solar:gallery-wide-line-duotone" width="28" />
                   <span>Aucune image</span>
@@ -238,13 +241,13 @@ async function onSubmit() {
                   @click="triggerFileInput(slide.id)"
                 >
                   <Icon icon="solar:upload-line-duotone" width="17" style="margin-right: 6px;" />
-                  {{ slide.imageUrl ? "Remplacer l'image" : 'Choisir une image' }}
+                  {{ slide.image ? "Remplacer l'image" : 'Choisir une image' }}
                 </v-btn>
               </template>
 
               <v-text-field
                 v-else
-                v-model="slide.imageUrl" label="URL de l'image" placeholder="https://..."
+                v-model="slide.image" label="URL de l'image" placeholder="https://..."
                 variant="solo-filled" flat rounded="xl" density="comfortable" class="mb-3"
               >
                 <template #prepend-inner><Icon icon="solar:link-line-duotone" width="18" /></template>
@@ -265,14 +268,20 @@ async function onSubmit() {
               </v-text-field>
 
               <div class="field-row">
-                <v-text-field
-                  v-model="slide.ctaLabel" label="Texte du bouton (optionnel)"
-                  variant="solo-filled" flat rounded="xl" density="comfortable"
-                >
+                  <v-text-field
+                    v-model="slide.ctaLabel"
+                    label="Texte du bouton (optionnel)"
+                    hint="Laisse vide avec le lien pour masquer le bouton"
+                    persistent-hint
+                    variant="solo-filled"
+                    flat
+                    rounded="xl"
+                    density="comfortable"
+                  >
                   <template #prepend-inner><Icon icon="solar:cursor-line-duotone" width="18" /></template>
                 </v-text-field>
                 <v-text-field
-                  v-model="slide.ctaLink" label="Lien du bouton (optionnel)"
+                  v-model="slide.ctaTo" label="Lien du bouton (optionnel)"
                   variant="solo-filled" flat rounded="xl" density="comfortable"
                 >
                   <template #prepend-inner><Icon icon="solar:link-round-line-duotone" width="18" /></template>

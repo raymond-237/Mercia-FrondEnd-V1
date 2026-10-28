@@ -117,7 +117,7 @@ async function confirmAction() {
       <div class="panel header-panel">
         <div class="header-top">
           <div>
-            <div class="product-title">{{ inventory.productVariant?.productName ?? 'Produit' }}</div>
+            <div class="product-title">{{ inventory.productVariant?.product?.name ?? 'Produit' }}</div>
             <div class="muted">{{ inventory.productVariant?.name }} · SKU {{ inventory.productVariant?.sku ?? '—' }}</div>
           </div>
           <span class="stock-badge" :class="stockStatus(inventory).class">{{ stockStatus(inventory).label }}</span>

@@ -3,7 +3,23 @@ import { request } from '~/@cores/constantes/helpers'
 import { JsonaDeserialize } from '~/@cores/jsonabuilder'
 import type { InventoryListItem, InventoryDetail } from '~/types/Models/inventory.type'
 
+function mergeProductNames(items: InventoryListItem[], raw: any): InventoryListItem[] {
+  const included: any[] = raw?.included ?? []
+
+  const variants = new Map(included.filter(i => i.type === 'product-variants').map(i => [i.id, i]))
+  const products = new Map(included.filter(i => i.type === 'products').map(i => [i.id, i]))
+  const rawById  = new Map((raw?.data ?? []).map((i: any) => [i.id, i]))
+
+  return items.map(item => {
+    const rawItem: any = rawById.get(item.id)
+    const variant: any = variants.get(rawItem?.relationships?.productVariant?.data?.id)
+    const product: any = products.get(variant)
+
+    return { ...item, productName:product?.name ?? null }
+  })
+}
 export default function useInventoryService() {
+  
 
   const list = async (params?: { search?: string; page?: number }) => {
     const response: AxiosResponse = await request('inventories', {
@@ -11,11 +27,13 @@ export default function useInventoryService() {
       params: {
         'filter[search]': params?.search || undefined,
         'page[number]': params?.page || 1,
-        include: 'productVariant',
+        include: 'productVariant,productVariant.product',
       },
     })
+    const items = JsonaDeserialize<InventoryListItem[]>(response.data)
+
     return {
-      data: JsonaDeserialize<InventoryListItem[]>(response.data),
+      data: mergeProductNames(items, response.data),
       meta: response.data?.meta,
     }
   }
@@ -23,7 +41,7 @@ export default function useInventoryService() {
   const show = async (id: string) => {
     const response: AxiosResponse = await request(`inventories/${id}`, {
       method: 'get',
-      params: { include: 'productVariant,movements' },
+      params: { include: 'productVariant,movements,productVariant.product' },
     })
     return JsonaDeserialize<InventoryDetail>(response.data)
   }

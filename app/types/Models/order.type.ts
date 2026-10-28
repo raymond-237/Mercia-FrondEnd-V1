@@ -121,3 +121,24 @@ export interface PaymentMethodOption {
   pickupHours?: string | null
   pickupInstructions?: string | null
 }
+
+export interface LastOrderPaymentDetails {
+  method: string
+  iban?: string | null
+  bic?: string | null
+  accountHolder?: string | null
+  bankName?: string | null
+  pickupAddress?: string | null
+  pickupHours?: string | null
+}
+
+export interface LastOrder {
+  orderNumber: string
+  total: number
+  paymentMethod: string
+  shippingMethod?: {
+    minDays?: number | null
+    maxDays?: number | null
+  } | null
+  paymentDetails?: LastOrderPaymentDetails | null
+}

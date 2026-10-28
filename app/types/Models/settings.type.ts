@@ -93,15 +93,21 @@ export interface TeamMember {
 }
 
 export interface HeroSlide {
-  id: string
-  imageUrl: string | null
-  sourceType: 'upload' | 'url'
+  image: string | null
+  eyebrow?: string
   title?: string
   subtitle?: string
   ctaLabel?: string
-  ctaLink?: string
-  isActive: boolean
-  order: number
+  ctaTo?: string
+  ctaSecondaryLabel?: string
+  ctaSecondaryTo?: string
+  tone?: 'primary' | 'secondary'
+  isActive?: boolean
+}
+
+export interface HeroSlideForm extends HeroSlide {
+  id: string
+  sourceType: 'upload' | 'url'
 }
 
 export interface HeroFormData {

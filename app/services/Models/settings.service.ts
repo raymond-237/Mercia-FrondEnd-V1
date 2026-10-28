@@ -53,19 +53,23 @@ export default function useSettingsService() {
 
   // ── Hero carousel 
   const updateHeroSlides = async (payload: HeroFormData): Promise<{ slides: HeroSlide[] }> => {
-    const response: AxiosResponse = await request('tenant/hero-slides', { method: 'patch', data: payload })
+    const response: AxiosResponse = await request('backoffice/settings/hero-slides',
+      {
+        method: 'put',
+        data: payload
+      })
     return response.data?.data
   }
 
   const uploadHeroImage = async (file: File): Promise<string> => {
     const formData = new FormData()
     formData.append('image', file)
-    const response: AxiosResponse = await request('tenant/hero-slides/image', {
+    const response: AxiosResponse = await request('backoffice/settings/hero-slides/upload', {
       method: 'post',
       data: formData,
       headers: { 'Content-Type': 'multipart/form-data' },
     })
-    return response.data?.data?.imageUrl
+    return response.data?.data?.url
   }
 
   const changePassword = async (payload: ChangePasswordFormData) => {

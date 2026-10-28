@@ -1,6 +1,7 @@
 export default {
     hero: {
         slides: {
+              defaultCta:"Our guide",
             slide1: {
                 eyebrow: 'New collection',
                 title: 'Reveal the beauty\nof your hair',

@@ -10,7 +10,7 @@ interface Slide {
   eyebrow?: string
   title: string
   sub: string
-  cta: { label: string; to: string }
+  cta?: { label: string; to: string }
   ctaSecondary?: { label: string; to: string }
   image: string
   tone: 'primary' | 'secondary'
@@ -47,7 +47,10 @@ const staticSlides = computed<Slide[]>(() => staticSlidesMeta.map((s, i) => ({
 const { data: dbSlidesRaw } = await useAsyncData('public-hero-slides', async () => {
   try {
     const response = await service.fetchHero()
-    return response.slides ?? []
+    console.log('[hero] réponse publique', JSON.stringify(response))
+
+    // return response.slides ?? []
+    return Array.isArray(response) ? response : []
   } catch (e) {
     console.error('[hero] Impossible de charger les slides depuis le backend, fallback statique:', e)
     return []
@@ -56,19 +59,20 @@ const { data: dbSlidesRaw } = await useAsyncData('public-hero-slides', async () 
 
 function mapDbSlide(raw: any, index: number): Slide {
   return {
-    id: raw.id,
-    image: raw.imageUrl,
-    // Pas de champ "tone" côté modèle admin (juste image/titre/sous-titre/CTA) —
-    // on alterne pour garder le contraste visuel entre slides successives.
-    tone: index % 2 === 0 ? 'secondary' : 'primary',
+    id: `db-${index}`,
+    image: raw.image,
+    tone: raw.tone || (index % 2 === 0 ? 'secondary' : 'primary'),
+    eyebrow: raw.eyebrow || undefined,
     title: raw.title || '',
     sub: raw.subtitle || '',
-    cta: {
-      label: raw.ctaLabel || t('home.hero.defaultCta'),
-      to: raw.ctaLink || '/shop',
-    },
-    // Pas d'eyebrow ni de CTA secondaire dans le formulaire admin actuel —
-    // les deux restent optionnels dans le template, donc simplement absents ici.
+    cta: (raw.ctaLabel || raw.ctaTo)?
+    {
+      label: raw.ctaLabel || t('home.hero.slides.defaultCta'),
+      to: raw.ctaTo || '/shop',
+    }:undefined,
+    ctaSecondary: (raw.ctaSecondaryLabel && raw.ctaSecondaryTo)
+      ? { label: raw.ctaSecondaryLabel, to: raw.ctaSecondaryTo }
+      : undefined,
   }
 }
 
@@ -77,8 +81,7 @@ const slides = computed<Slide[]>(() => {
 
   if (Array.isArray(db) && db.length > 0) {
     return db
-      .filter((s: any) => s.isActive !== false)
-      .sort((a: any, b: any) => (a.order ?? 0) - (b.order ?? 0))
+      .filter((s: any) => s.isActive !== false && s.image)
       .map((s: any, i: number) => mapDbSlide(s, i))
   }
 
@@ -132,8 +135,9 @@ onUnmounted(stopTimer)
   >
 
     <div class="hero-track" :style="{ transform: `translateX(-${current * 100}%)` }">
-      <div v-for="slide in slides" :key="slide.id" class="hero-slide">
-        <img :src="slide.image" :alt="slide.eyebrow || slide.title" loading="eager">
+        <div v-for="slide in slides" :key="slide.id" class="hero-slide">
+          <img class="hero-backdrop" :src="slide.image" alt="" aria-hidden="true">
+          <img class="hero-image" :src="slide.image" :alt="slide.eyebrow || slide.title" loading="eager">
         <div class="hero-fade" />
 
         <div class="hero-copy">
@@ -141,12 +145,12 @@ onUnmounted(stopTimer)
             <Icon icon="solar:star-line-duotone" width="12" />
             {{ slide.eyebrow }}
           </span>
+          <h1 v-if="slide.title" class="hero-title">{{ slide.title }}</h1>
+          <p v-if="slide.sub" class="hero-sub">{{ slide.sub }}</p>
 
-          <h1 class="hero-title">{{ slide.title }}</h1>
-          <p class="hero-sub">{{ slide.sub }}</p>
-
-          <div class="hero-ctas">
+          <div v-if="slide.cta || slide.ctaSecondary" class="hero-ctas">
             <NuxtLink
+              v-if="slide.cta"
               :to="slide.cta.to"
               class="hero-cta-primary"
               :class="`tone-${slide.tone}`"
@@ -154,6 +158,7 @@ onUnmounted(stopTimer)
               {{ slide.cta.label }}
               <Icon icon="solar:arrow-right-line-duotone" width="14" />
             </NuxtLink>
+
             <NuxtLink v-if="slide.ctaSecondary" :to="slide.ctaSecondary.to" class="hero-cta-secondary">
               {{ slide.ctaSecondary.label }}
             </NuxtLink>
@@ -193,7 +198,7 @@ onUnmounted(stopTimer)
 
 .hero {
   position: relative;
-  border-radius: 18px;
+  /* border-radius: 18px; */
   display: block;
   width: 100%;
   overflow: hidden;
@@ -216,12 +221,17 @@ onUnmounted(stopTimer)
   height: 100%;
 }
 
-.hero-slide img {
+.hero-image {
+  position: relative;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center 22%;
+  object-position: center center;
   display: block;
+}
+
+.hero-backdrop {
+  display: none;
 }
 
 .hero-fade {
@@ -380,5 +390,21 @@ onUnmounted(stopTimer)
   .hero-nav { right: 48px; bottom: 32px; }
 
   .hero-arrow { width: 36px; height: 36px; }
+
+  .hero-backdrop {
+  display: block;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: blur(32px) saturate(1.2);
+  transform: scale(1.15);
+}
+
+.hero-image {
+  object-fit: contain;
+  object-position: right center;
+}
 }
 </style>

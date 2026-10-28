@@ -2,8 +2,10 @@ import { acceptHMRUpdate, defineStore } from 'pinia'
 import useOrdersService from '~/services/Models/orders.service'
 import usePaymentMethodsService from '~/services/Models/paymentMethods.service'
 import useShippingMethodsService from '~/services/Models/shipping-methods.service'
-import type { CheckoutPayload, CheckoutResult, PaymentMethodOption } from '~/types/Models/order.type'
+import type { CheckoutPayload, CheckoutResult, LastOrder, PaymentMethodOption } from '~/types/Models/order.type'
 import type { ShippingMethodData } from '~/types/public/index.type'
+
+
 
 export const useOrdersStore = defineStore('orders', () => {
 
@@ -15,15 +17,51 @@ export const useOrdersStore = defineStore('orders', () => {
 
   const shippingMethods = ref<ShippingMethodData[]>([])
   const paymentMethods  = ref<PaymentMethodOption[]>([])
-  const lastOrder        = ref<CheckoutResult | null>(null)
-
+  const lastOrder = ref<LastOrder | null>(null)
   const loadingShipping  = ref(false)
   const loadingPayment   = ref(false)
   const submitting       = ref(false)
   const error             = ref<string | null>(null)
 
   // ── Actions
+    function setLastOrder(order: LastOrder) {
+      lastOrder.value = order
 
+      if (import.meta.client) {
+        try {
+          sessionStorage.setItem('ae-last-order', JSON.stringify(order))
+        } catch {}
+      }
+    }
+
+    function restoreLastOrder() {
+      if (lastOrder.value || !import.meta.client) return
+
+      try {
+        const raw = sessionStorage.getItem('ae-last-order')
+        lastOrder.value = raw ? JSON.parse(raw) : null
+      } catch {
+        lastOrder.value = null
+      }
+  }
+  function buildLastOrder(
+    result: CheckoutResult,
+    payload: CheckoutPayload,
+    methods: PaymentMethodOption[],
+    shippingMethods: ShippingMethodData[],
+  ): LastOrder {
+    const paymentMethod = result.paymentMethod ?? payload.paymentMethod
+    const details = methods.find(m => m.method === paymentMethod) ?? null
+
+    return {
+      orderNumber: result.orderNumber,
+      total: Number(result.total),
+      paymentMethod,
+      shippingMethod: shippingMethods.find(m => m.id === payload.shippingMethodId) ?? null,
+      paymentDetails: details,
+    }
+}
+  
   async function fetchShippingMethods(params: { country?: string; subtotal?: number } = {}) {
     loadingShipping.value = true
     try {
@@ -65,7 +103,9 @@ export const useOrdersStore = defineStore('orders', () => {
 
     try {
       const result = await ordersService.checkout(payload)
-      lastOrder.value = result
+      console.log('[checkout]', JSON.stringify({ result, payload }))
+        if (result) {
+       setLastOrder(buildLastOrder(result, payload, paymentMethods.value, shippingMethods.value))      }
       return result
     } catch (e: any) {
       error.value = e?.response?.data?.errors?.[0]?.detail ?? 'Impossible de valider la commande.'
@@ -114,6 +154,9 @@ export const useOrdersStore = defineStore('orders', () => {
     }
   }
 
+
+  
+
   return {
     // state
     shippingMethods,
@@ -132,6 +175,8 @@ export const useOrdersStore = defineStore('orders', () => {
     fetchOrder,
     fetchOrderTracking,
     captureOrder,
+    setLastOrder,
+    restoreLastOrder,
   }
 })
 

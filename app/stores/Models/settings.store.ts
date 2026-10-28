@@ -9,6 +9,8 @@ import type {
   ChangePasswordFormData,
   TeamMember,
   HeroSlide,
+  HeroSlideForm,
+  HeroFormData,
 } from '~/types/Models/settings.type'
 
 export const useAdminSettingsStore = defineStore('adminSettings', {
@@ -110,35 +112,31 @@ export const useAdminSettingsStore = defineStore('adminSettings', {
     },
 
     // ── Hero carousel 
-    async saveHeroSlides(slides: HeroSlide[]): Promise<boolean> {
-      this.saving = true
-      this.error  = null
-      try {
-        const service = useSettingsService()
+async saveHeroSlides(slides: HeroSlideForm[]): Promise<boolean> {
+  this.saving = true
+  this.error  = null
 
-        // sourceType est un détail d'UI (upload vs URL), le backend n'a
-        // besoin que de imageUrl. Les slides ajoutées côté client portent
-        // un id temporaire ("new-...") : on ne l'envoie pas, le backend
-        // génère le vrai id (ULID) à la création.
-        const payload = {
-          slides: slides.map(({ id, sourceType, ...rest }) => ({
-            ...rest,
-            ...(id && !id.startsWith('new-') ? { id } : {}),
-          })),
-        }
+  try {
+    const service = useSettingsService()
 
-        const updated = await service.updateHeroSlides(payload)
-        if (this.settings) {
-          this.settings.hero = { slides: updated?.slides ?? slides }
-        }
-        return true
-      } catch (e: any) {
-        this.error = e?.response?.data?.errors?.[0]?.detail ?? 'Impossible de sauvegarder.'
-        return false
-      } finally {
-        this.saving = false
-      }
-    },
+    const payload: HeroFormData = {
+      slides: slides.map(({ id, sourceType, ...rest }) => rest),
+    }
+
+    const updated = await service.updateHeroSlides(payload)
+
+    if (this.settings) {
+      this.settings.heroSlides = updated?.slides ?? payload.slides
+    }
+
+    return true
+  } catch (e: any) {
+    this.error = e?.response?.data?.errors?.[0]?.detail ?? 'Impossible de sauvegarder.'
+    return false
+  } finally {
+    this.saving = false
+  }
+},
 
     // Upload d'une seule image de slide — volontairement séparé de `saving`
     // (qui pilote le bouton "Enregistrer" global) pour ne pas bloquer tout

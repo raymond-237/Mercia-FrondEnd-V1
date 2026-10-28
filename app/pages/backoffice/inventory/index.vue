@@ -85,6 +85,7 @@ const filteredInventories = computed(() => {
   if (filterStock.value === 'all') return inventories.value
   return inventories.value.filter(i => stockStatus(i).class === filterStock.value)
 })
+console.log('data inventory =>',filteredInventories)
 
 // ── Avatar produit — couleur déterministe par variante, cohérent avec le
 // pattern déjà utilisé sur la page clients.
@@ -95,7 +96,7 @@ function avatarColor(id: string) {
   return AVATAR_RAMPS[Math.abs(hash) % AVATAR_RAMPS.length]
 }
 function initials(inv: InventoryListItem) {
-  const name = inv.productVariant?.productName ?? 'PR'
+  const name = inv.productVariant?.product?.name ?? 'PR'
   return name
     .split(' ')
     .slice(0, 2)
@@ -227,7 +228,7 @@ function formatDate(iso: string) {
               <div class="row-product-cell">
                 <div class="avatar" :class="`bg-${avatarColor(inv.id)}`">{{ initials(inv) }}</div>
                 <div>
-                  <div class="row-product">{{ inv.productVariant?.productName ?? 'Produit' }}</div>
+                  <div class="row-product">{{ inv.productVariant?.product.name ?? 'Produit' }}</div>
                   <div class="muted">{{ inv.productVariant?.name }}</div>
                 </div>
               </div>
