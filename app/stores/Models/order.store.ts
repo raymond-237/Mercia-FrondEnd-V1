@@ -103,7 +103,7 @@ export const useOrdersStore = defineStore('orders', () => {
 
     try {
       const result = await ordersService.checkout(payload)
-      console.log('[checkout]', JSON.stringify({ result, payload }))
+      // console.log('[checkout]', JSON.stringify({ result, payload }))
         if (result) {
        setLastOrder(buildLastOrder(result, payload, paymentMethods.value, shippingMethods.value))      }
       return result
