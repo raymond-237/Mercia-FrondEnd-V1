@@ -15,7 +15,7 @@ const props = withDefaults(defineProps<{
 })
 
 const emit = defineEmits<{ submit: [ProductFormData] }>()
-
+const removedMediaIds = ref<string[]>([])
 const productsStore = useProductsStore()
 const suppliersStore = useSuppliersStore()
 const mediasService  = useMediasService()
@@ -167,10 +167,18 @@ async function onFileSelect(e: Event) {
 
 function removeMedia(id: string) {
   const item = form.media.find(m => m.id === id)
+  if (!item) return
+
   form.media = form.media.filter(m => m.id !== id)
-  if (item?.remoteId) {
-    mediasService.remove(item.remoteId).catch(() => {})
+
+  if (item.remoteId) {
+    mediasService.remove(item.remoteId).catch((e) => {
+      console.error('Erreur suppression média temporaire:', e)
+    })
+  } else if (props.mode === 'edit') {
+    removedMediaIds.value.push(item.id)
   }
+
   if (mediaLightbox.value?.id === id) mediaLightboxOpen.value = false
 }
 
@@ -387,7 +395,11 @@ async function onSubmit() {
   const { valid } = await validateStep1()
   if (!valid) { step.value = 1; return }
   if (form.media.some(m => m.uploading)) { step.value = 2; return }
-  emit('submit', { ...form, removedVariantIds: removedVariantIds.value } as any)
+  emit('submit', {
+  ...form,
+  removedVariantIds: removedVariantIds.value,
+  removedMediaIds: removedMediaIds.value,
+} as any)
 }
 </script>
 
@@ -472,7 +484,7 @@ async function onSubmit() {
         </v-text-field>
 
         <v-text-field v-model="form.shortDescription" label="Description courte" variant="solo-filled" flat rounded="xl" density="comfortable" class="mb-3">
-          <template #prepend-inner><Icon icon="solar:chat-line-line-duotone" width="18" /></template>
+          <template #prepend-inner><Icon icon="solar:chat-Aline-line-duotone" width="18" /></template>
         </v-text-field>
 
         <v-textarea v-model="form.description" label="Description complete" rows="5" variant="solo-filled" flat rounded="xl" density="comfortable">
